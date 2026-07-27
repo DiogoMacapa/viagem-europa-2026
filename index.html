@@ -182,7 +182,8 @@
     <div class="tabs" style="border-bottom:none;margin-bottom:1.25rem;padding-top:0;position:static;">
       <button class="subtab active" data-sub="geral" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Visão geral</button>
       <button class="subtab" data-sub="cat" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Categorias</button>
-      <button class="subtab" data-sub="trechos" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;">Trechos</button>
+      <button class="subtab" data-sub="trechos" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Trechos</button>
+      <button class="subtab" data-sub="despesas" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;">Despesas</button>
     </div>
 
     <div class="subpanel active" id="sub-geral">
@@ -223,6 +224,19 @@
       </div>
       <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
       <div class="barchart-box"><canvas id="legbar"></canvas></div>
+    </div>
+
+    <div class="subpanel" id="sub-despesas" style="display:none;">
+      <p class="hint" style="margin-bottom:1rem;">Lance cada despesa individual (ex: hotel de cada cidade) e atribua a uma categoria — o total da categoria passa a ser a soma das despesas lançadas nela.</p>
+      <div id="exp-summary" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;"></div>
+      <div id="exp-rows"></div>
+      <div class="add-row">
+        <input type="text" id="new-exp-desc" placeholder="Descrição (ex: Hotel Paris)">
+        <select id="new-exp-cat" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;"></select>
+        <input type="number" id="new-exp-value" placeholder="Valor R$" step="10" min="0">
+        <button id="add-exp">+ Adicionar despesa</button>
+      </div>
+      <div class="total-line" style="margin-top:1rem;"><span>Total lançado</span><span class="value" id="exp-total"></span></div>
     </div>
   </div>
 
@@ -295,6 +309,7 @@ var legs = [
   {id:'garda', name:'Lago di Garda', days:3, value:3580},
   {id:'portofino', name:'Portofino', days:4, value:5610}
 ];
+var expenses=[];
 var checklist=[
   {id:'c1',text:'Passagens de trem Paris → Strasbourg e trechos italianos',checked:false},
   {id:'c2',text:'Voo Strasbourg → Milão (low-cost)',checked:false},
@@ -307,7 +322,9 @@ var DAYS=18, PESSOAS=3, MIN_R=25000, MAX_R=30000;
 var donutChart=null, legChart=null, selectedCat=null, map=null;
 
 function brl(v){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(Math.round(v)); }
-function total(){ return categories.reduce(function(a,c){return a+c.value;},0); }
+function catExpenses(catId){ return expenses.filter(function(x){return x.categoryId===catId;}); }
+function catValue(c){ var exps=catExpenses(c.id); return exps.length ? exps.reduce(function(a,x){return a+x.value;},0) : c.value; }
+function total(){ return categories.reduce(function(a,c){return a+catValue(c);},0); }
 function legTotal(){ return legs.reduce(function(a,l){return a+l.value;},0); }
 function fmtDate(dt){ return dt.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'}); }
 
@@ -518,7 +535,7 @@ function renderGauge(){
 }
 function renderLegend(){
   document.getElementById('legend').innerHTML = categories.map(function(c){
-    var pct=Math.round(c.value/total()*100);
+    var pct=Math.round(catValue(c)/total()*100);
     return '<div class="legend-item" data-cat="'+c.id+'"><span class="swatch" style="background:'+c.color+'"></span><span class="name">'+c.icon+' '+c.name+'</span><span class="pct">'+pct+'%</span></div>';
   }).join('');
   document.querySelectorAll('.legend-item').forEach(function(el){
@@ -529,12 +546,14 @@ function renderDetail(){
   var box=document.getElementById('detail');
   if(!selectedCat){ box.innerHTML='Clique em uma fatia do gráfico ou em uma categoria na legenda para ver o detalhe por dia e por pessoa.'; return; }
   var c=categories.find(function(x){return x.id===selectedCat;});
-  var perDay=c.value/DAYS, perPersonDay=perDay/PESSOAS;
-  box.innerHTML='<strong>'+c.icon+' '+c.name+'</strong> — '+brl(c.value)+' no total · '+brl(perDay)+' por dia · '+brl(perPersonDay)+' por pessoa/dia · '+Math.round(c.value/total()*100)+'% do orçamento';
+  var val=catValue(c);
+  var perDay=val/DAYS, perPersonDay=perDay/PESSOAS;
+  var exps=catExpenses(c.id);
+  box.innerHTML='<strong>'+c.icon+' '+c.name+'</strong> — '+brl(val)+' no total · '+brl(perDay)+' por dia · '+brl(perPersonDay)+' por pessoa/dia · '+Math.round(val/total()*100)+'% do orçamento'+(exps.length?' · '+exps.length+' despesa'+(exps.length>1?'s':'')+' lançada'+(exps.length>1?'s':''):' · estimativa (sem despesas lançadas)');
 }
 function renderDonut(){
   var ctx=document.getElementById('donut');
-  var data={ labels:categories.map(function(c){return c.name;}), datasets:[{ data:categories.map(function(c){return c.value;}), backgroundColor:categories.map(function(c){return c.color;}), borderColor:'#161B33', borderWidth:3 }] };
+  var data={ labels:categories.map(function(c){return c.name;}), datasets:[{ data:categories.map(function(c){return catValue(c);}), backgroundColor:categories.map(function(c){return c.color;}), borderColor:'#161B33', borderWidth:3 }] };
   if(donutChart){ donutChart.data=data; donutChart.update(); return; }
   donutChart=new Chart(ctx,{ type:'doughnut', data:data, options:{
     responsive:true, maintainAspectRatio:false, cutout:'64%',
@@ -554,18 +573,25 @@ function renderLegBar(){
 }
 function renderCatRows(){
   document.getElementById('cat-rows').innerHTML = categories.map(function(c){
+    var exps=catExpenses(c.id);
+    var valueHtml;
+    if(exps.length){
+      valueHtml='<span class="row-inputwrap"><span class="prefix">R$</span><span style="font-family:\'IBM Plex Mono\',monospace;font-size:14px;padding:8px 4px;color:var(--amber);">'+brl(catValue(c))+'</span></span><span style="font-size:11px;color:var(--muted);">'+exps.length+' desp.</span>';
+    } else {
+      valueHtml='<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" data-id="'+c.id+'" value="'+c.value+'"></span>';
+    }
     return '<div class="row"><span class="icon">'+c.icon+'</span>'+
       '<span class="name">'+c.name+'<span class="sub">'+(c.sub||'')+'</span></span>'+
       '<span class="pct" id="pct-'+c.id+'"></span>'+
-      '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" data-id="'+c.id+'" value="'+c.value+'"></span>'+
+      valueHtml+
       '<span class="row-actions">'+
       '<button type="button" class="iconbtn save cat-save" data-id="'+c.id+'" title="Salvar agora">✓</button>'+
       '<button type="button" class="iconbtn danger cat-del" data-id="'+c.id+'" title="Excluir categoria">🗑</button>'+
       '</span></div>';
   }).join('');
-  categories.forEach(function(c){ document.getElementById('pct-'+c.id).textContent=Math.round(c.value/total()*100)+'%'; });
+  categories.forEach(function(c){ document.getElementById('pct-'+c.id).textContent=Math.round(catValue(c)/total()*100)+'%'; });
   document.getElementById('cat-total').textContent=brl(total());
-  document.querySelectorAll('#cat-rows input').forEach(function(inp){
+  document.querySelectorAll('#cat-rows input[type=number]').forEach(function(inp){
     inp.addEventListener('input', function(){
       var c=categories.find(function(x){return x.id===inp.dataset.id;});
       c.value=Math.max(0, Number(inp.value)||0);
@@ -577,8 +603,9 @@ function renderCatRows(){
   });
   document.querySelectorAll('.cat-del').forEach(function(btn){
     btn.addEventListener('click', function(){
-      if(!confirm('Excluir esta categoria do orçamento?')) return;
+      if(!confirm('Excluir esta categoria e todas as despesas lançadas nela?')) return;
       categories=categories.filter(function(x){return x.id!==btn.dataset.id;});
+      expenses=expenses.filter(function(x){return x.categoryId!==btn.dataset.id;});
       selectedCat=null;
       renderBudget(); renderPainel(); scheduleSave();
     });
@@ -638,8 +665,76 @@ document.getElementById('add-leg').addEventListener('click', function(){
   nameInp.value=''; daysInp.value=''; valInp.value='';
   renderLegRows(); renderLegBar(); scheduleSave();
 });
+function expTotal(){ return expenses.reduce(function(a,e){return a+e.value;},0); }
+function renderExpenseSummary(){
+  document.getElementById('exp-summary').innerHTML = categories.map(function(c){
+    var exps=catExpenses(c.id);
+    if(!exps.length) return '';
+    return '<span style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12px;">'+c.icon+' '+c.name+': <b style="color:var(--amber);">'+brl(catValue(c))+'</b></span>';
+  }).join('');
+}
+function renderExpenseCatOptions(){
+  var sel=document.getElementById('new-exp-cat');
+  sel.innerHTML=categories.map(function(c){ return '<option value="'+c.id+'">'+c.icon+' '+c.name+'</option>'; }).join('');
+}
+function renderExpenseRows(){
+  document.getElementById('exp-rows').innerHTML = expenses.map(function(e){
+    var cat=categories.find(function(c){return c.id===e.categoryId;});
+    var opts=categories.map(function(c){ return '<option value="'+c.id+'"'+(c.id===e.categoryId?' selected':'')+'>'+c.icon+' '+c.name+'</option>'; }).join('');
+    return '<div class="row"><span class="icon">'+(cat?cat.icon:'💰')+'</span>'+
+      '<input type="text" class="exp-desc" data-id="'+e.id+'" value="'+esc(e.desc)+'" style="flex:1;min-width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
+      '<select class="exp-cat" data-id="'+e.id+'" style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:8px 6px;">'+opts+'</select>'+
+      '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" class="exp-val" step="10" min="0" data-id="'+e.id+'" value="'+e.value+'"></span>'+
+      '<span class="row-actions"><button type="button" class="iconbtn danger exp-del" data-id="'+e.id+'" title="Excluir">🗑</button></span>'+
+      '</div>';
+  }).join('');
+  document.getElementById('exp-total').textContent=brl(expTotal());
+  document.querySelectorAll('.exp-desc').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      var e=expenses.find(function(x){return x.id===inp.dataset.id;});
+      e.desc=inp.value;
+      scheduleSave();
+    });
+  });
+  document.querySelectorAll('.exp-cat').forEach(function(sel){
+    sel.addEventListener('change', function(){
+      var e=expenses.find(function(x){return x.id===sel.dataset.id;});
+      e.categoryId=sel.value;
+      renderBudget(); renderPainel(); scheduleSave();
+    });
+  });
+  document.querySelectorAll('.exp-val').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      var e=expenses.find(function(x){return x.id===inp.dataset.id;});
+      e.value=Math.max(0, Number(inp.value)||0);
+      document.getElementById('exp-total').textContent=brl(expTotal());
+      renderExpenseSummary();
+      renderCards(); renderGauge(); renderLegend(); renderDetail(); renderDonut(); renderPainel();
+      scheduleSave();
+    });
+  });
+  document.querySelectorAll('.exp-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(!confirm('Excluir esta despesa?')) return;
+      expenses=expenses.filter(function(x){return x.id!==btn.dataset.id;});
+      renderBudget(); renderPainel(); scheduleSave();
+    });
+  });
+}
+document.getElementById('add-exp').addEventListener('click', function(){
+  var descInp=document.getElementById('new-exp-desc');
+  var catSel=document.getElementById('new-exp-cat');
+  var valInp=document.getElementById('new-exp-value');
+  var desc=descInp.value.trim();
+  var value=Math.max(0, Number(valInp.value)||0);
+  if(!desc || !catSel.value) return;
+  expenses.push({id:'exp_'+Date.now(),categoryId:catSel.value,desc:desc,value:value});
+  descInp.value=''; valInp.value='';
+  renderBudget(); renderPainel(); scheduleSave();
+});
 function renderBudget(){
   renderCards(); renderGauge(); renderLegend(); renderDetail(); renderDonut(); renderCatRows();
+  renderExpenseCatOptions(); renderExpenseRows(); renderExpenseSummary();
 }
 document.getElementById('reset-cat').addEventListener('click', function(){
   categories.forEach(function(c){ c.value=c.def; });
@@ -708,7 +803,8 @@ function saveNow(){
     legs:legs,
     startdate:document.getElementById('startdate').value,
     checklist:checklist,
-    itinerary:itinerary
+    itinerary:itinerary,
+    expenses:expenses
   };
   sb.schema('viagem').from('trip_state').upsert({id:TRIP_ID,payload:payload,updated_at:new Date().toISOString()}).then(function(res){
     if(res.error){ setSaveStatus('Erro ao salvar','var(--danger)'); console.error(res.error); }
@@ -728,6 +824,7 @@ function loadState(){
     if(p.checklist){ checklist=p.checklist; }
     else if(p.checklistChecked){ checklist.forEach(function(item,i){ item.checked=!!p.checklistChecked[i]; }); }
     if(p.itinerary && p.itinerary.length){ itinerary=p.itinerary; }
+    if(p.expenses){ expenses=p.expenses; }
     setSaveStatus('Salvo ✓','var(--success)');
   });
 }
