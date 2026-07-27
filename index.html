@@ -109,6 +109,26 @@
   .tips-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:1.5rem;}
   .tip-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.5;color:var(--muted);}
   .tip-card b{display:block;color:var(--cream);font-size:13px;margin-bottom:4px;}
+
+  .iconbtn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;width:30px;height:30px;font-size:13px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .iconbtn:hover{border-color:var(--amber);color:var(--amber);}
+  .iconbtn.danger:hover{border-color:var(--danger);color:var(--danger);}
+  .iconbtn.save:hover{border-color:var(--success);color:var(--success);}
+  .row-actions{display:flex;gap:6px;}
+  .add-row{display:flex;gap:8px;align-items:center;background:var(--bg-card-alt);border:1px dashed var(--border);border-radius:10px;padding:10px 14px;margin-top:6px;flex-wrap:wrap;}
+  .add-row input[type=text]{flex:1;min-width:120px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;}
+  .add-row input[type=number]{width:110px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:8px 10px;text-align:right;}
+  .add-row input:focus{outline:none;border-color:var(--amber);}
+  .add-row button{background:var(--amber);border:none;color:var(--bg);font-weight:500;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;white-space:nowrap;}
+  .day-edit textarea, .day-edit input{width:100%;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;font-family:'Inter';margin-bottom:8px;resize:vertical;}
+  .day-edit label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;}
+  .day-actions{display:flex;gap:8px;margin-top:10px;}
+  .day-actions button{border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;font-family:'Inter';}
+  .btn-save{background:var(--amber);border:none;color:var(--bg);font-weight:500;}
+  .btn-cancel{background:none;border:1px solid var(--border);color:var(--muted);}
+  .day-head-actions{display:flex;gap:6px;align-items:center;}
+  .check-item{position:relative;}
+  .check-item .row-actions{margin-left:auto;}
 </style>
 </head>
 <body>
@@ -184,12 +204,23 @@
         <button class="reset" id="reset-cat">↺ Restaurar estimativa original</button>
       </div>
       <div id="cat-rows"></div>
+      <div class="add-row">
+        <input type="text" id="new-cat-name" placeholder="Nome da nova categoria">
+        <input type="number" id="new-cat-value" placeholder="Valor R$" step="50" min="0">
+        <button id="add-cat">+ Adicionar categoria</button>
+      </div>
       <div class="total-line"><span>Total</span><span class="value" id="cat-total"></span></div>
     </div>
 
     <div class="subpanel" id="sub-trechos" style="display:none;">
       <p class="hint" style="margin-bottom:1rem;">Mesmo orçamento, dividido por trecho/cidade da viagem</p>
       <div id="leg-rows"></div>
+      <div class="add-row">
+        <input type="text" id="new-leg-name" placeholder="Nome do novo trecho">
+        <input type="number" id="new-leg-days" placeholder="Dias" step="1" min="1" style="width:80px;">
+        <input type="number" id="new-leg-value" placeholder="Valor R$" step="50" min="0">
+        <button id="add-leg">+ Adicionar trecho</button>
+      </div>
       <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
       <div class="barchart-box"><canvas id="legbar"></canvas></div>
     </div>
@@ -199,6 +230,10 @@
   <div class="panel" id="panel-checklist">
     <h2 class="section" style="font-size:16px;">Reservar antes de sair do Brasil</h2>
     <div id="check-list"></div>
+    <div class="add-row">
+      <input type="text" id="new-check-text" placeholder="Novo item do checklist...">
+      <button id="add-check">+ Adicionar item</button>
+    </div>
 
     <div class="tips-grid">
       <div class="tip-card"><b>💸 Economia</b>Aparts com cozinha economizam no café da manhã e em jantares caseiros — pode liberar R$300-400 extras para passeios.</div>
@@ -260,14 +295,13 @@ var legs = [
   {id:'garda', name:'Lago di Garda', days:3, value:3580},
   {id:'portofino', name:'Portofino', days:4, value:5610}
 ];
-var checklistItems=[
-  'Passagens de trem Paris → Strasbourg e trechos italianos',
-  'Voo Strasbourg → Milão (low-cost)',
-  'Hospedagem em Strasbourg (alta temporada por causa do mercado de Natal)',
-  'Seguro viagem com cobertura para idosos e pediátrica',
-  'Ingresso do Louvre com horário marcado'
+var checklist=[
+  {id:'c1',text:'Passagens de trem Paris → Strasbourg e trechos italianos',checked:false},
+  {id:'c2',text:'Voo Strasbourg → Milão (low-cost)',checked:false},
+  {id:'c3',text:'Hospedagem em Strasbourg (alta temporada por causa do mercado de Natal)',checked:false},
+  {id:'c4',text:'Seguro viagem com cobertura para idosos e pediátrica',checked:false},
+  {id:'c5',text:'Ingresso do Louvre com horário marcado',checked:false}
 ];
-var checklistChecked=[false,false,false,false,false];
 
 var DAYS=18, PESSOAS=3, MIN_R=25000, MAX_R=30000;
 var donutChart=null, legChart=null, selectedCat=null, map=null;
@@ -359,6 +393,9 @@ function renderPainel(){
 document.getElementById('startdate').addEventListener('change', function(){ renderPainel(); renderItinerary(); scheduleSave(); });
 
 // ---------- ROTEIRO ----------
+var editingDay=null;
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 function renderItinerary(){
   var start=getStartDate(); var today=todayMidnight();
   var html='';
@@ -369,18 +406,72 @@ function renderItinerary(){
     days.forEach(function(it){
       var d=new Date(start); d.setDate(d.getDate()+(it.d-1));
       var isToday=d.getTime()===today.getTime();
-      html+='<div class="day-card'+(isToday?' is-today':'')+'" id="day-'+it.d+'">'+
-        '<div class="day-head"><div><span class="daynum">Dia '+it.d+' · '+fmtDate(d)+'</span><h3>'+it.theme+'</h3></div>'+(isToday?'<span class="dpill">Hoje</span>':'')+'</div>'+
-        '<div class="period"><b>Manhã</b><span>'+it.m+'</span></div>'+
-        '<div class="period"><b>Tarde</b><span>'+it.t+'</span></div>'+
-        '<div class="period"><b>Noite</b><span>'+it.n+'</span></div>'+
-        (it.maps.length?'<div class="maplinks">'+it.maps.map(function(mp){return '<a href="https://www.google.com/maps/search/?api=1&query='+mp.q+'" target="_blank" rel="noopener">📍 '+mp.n+'</a>';}).join('')+'</div>':'')+
-        (it.tip?'<div class="tip"><b>Dica</b> — '+it.tip+'</div>':'')+
-        '</div>';
+      if(editingDay===it.d){
+        html+='<div class="day-card day-edit" id="day-'+it.d+'">'+
+          '<span class="daynum">Dia '+it.d+' · '+fmtDate(d)+'</span>'+
+          '<label>Tema do dia</label><input type="text" id="edit-theme" value="'+esc(it.theme)+'">'+
+          '<label>Manhã</label><textarea id="edit-m" rows="2">'+esc(it.m)+'</textarea>'+
+          '<label>Tarde</label><textarea id="edit-t" rows="2">'+esc(it.t)+'</textarea>'+
+          '<label>Noite</label><textarea id="edit-n" rows="2">'+esc(it.n)+'</textarea>'+
+          '<label>Dica de ouro</label><textarea id="edit-tip" rows="2">'+esc(it.tip)+'</textarea>'+
+          '<div class="day-actions"><button type="button" class="btn-save" data-action="save-day" data-id="'+it.d+'">Salvar</button><button type="button" class="btn-cancel" data-action="cancel-day">Cancelar</button></div>'+
+          '</div>';
+      } else {
+        html+='<div class="day-card'+(isToday?' is-today':'')+'" id="day-'+it.d+'">'+
+          '<div class="day-head"><div><span class="daynum">Dia '+it.d+' · '+fmtDate(d)+'</span><h3>'+it.theme+'</h3></div>'+
+          '<div class="day-head-actions">'+(isToday?'<span class="dpill">Hoje</span>':'')+
+          '<button type="button" class="iconbtn" data-action="edit-day" data-id="'+it.d+'" title="Editar">✎</button>'+
+          '<button type="button" class="iconbtn danger" data-action="del-day" data-id="'+it.d+'" title="Excluir">🗑</button>'+
+          '</div></div>'+
+          '<div class="period"><b>Manhã</b><span>'+it.m+'</span></div>'+
+          '<div class="period"><b>Tarde</b><span>'+it.t+'</span></div>'+
+          '<div class="period"><b>Noite</b><span>'+it.n+'</span></div>'+
+          (it.maps.length?'<div class="maplinks">'+it.maps.map(function(mp){return '<a href="https://www.google.com/maps/search/?api=1&query='+mp.q+'" target="_blank" rel="noopener">📍 '+mp.n+'</a>';}).join('')+'</div>':'')+
+          (it.tip?'<div class="tip"><b>Dica</b> — '+it.tip+'</div>':'')+
+          '</div>';
+      }
     });
+    html+='<div class="add-row"><button type="button" data-action="add-day" data-leg="'+lid+'" style="width:100%;text-align:center;">+ Adicionar dia em '+lm.name+'</button></div>';
     html+='</div>';
   });
   document.getElementById('itinerary-list').innerHTML=html;
+
+  document.querySelectorAll('[data-action="edit-day"]').forEach(function(btn){
+    btn.addEventListener('click', function(){ editingDay=Number(btn.dataset.id); renderItinerary(); });
+  });
+  document.querySelectorAll('[data-action="cancel-day"]').forEach(function(btn){
+    btn.addEventListener('click', function(){ editingDay=null; renderItinerary(); });
+  });
+  document.querySelectorAll('[data-action="save-day"]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var it=itinerary.find(function(x){return x.d===Number(btn.dataset.id);});
+      it.theme=document.getElementById('edit-theme').value.trim()||it.theme;
+      it.m=document.getElementById('edit-m').value.trim();
+      it.t=document.getElementById('edit-t').value.trim();
+      it.n=document.getElementById('edit-n').value.trim();
+      it.tip=document.getElementById('edit-tip').value.trim();
+      editingDay=null;
+      renderItinerary(); renderPainel(); scheduleSave();
+    });
+  });
+  document.querySelectorAll('[data-action="del-day"]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(!confirm('Excluir este dia do roteiro?')) return;
+      itinerary=itinerary.filter(function(x){return x.d!==Number(btn.dataset.id);});
+      renderItinerary(); renderPainel(); scheduleSave();
+    });
+  });
+  document.querySelectorAll('[data-action="add-day"]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var maxD=itinerary.reduce(function(m,x){return Math.max(m,x.d);},0);
+      var newDay={d:maxD+1,leg:btn.dataset.leg,theme:'Novo dia',m:'',t:'',n:'',tip:'',maps:[]};
+      itinerary.push(newDay);
+      editingDay=newDay.d;
+      renderItinerary(); renderPainel(); scheduleSave();
+      var el=document.getElementById('day-'+newDay.d);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+    });
+  });
 }
 
 // ---------- MAPA ----------
@@ -464,10 +555,13 @@ function renderLegBar(){
 function renderCatRows(){
   document.getElementById('cat-rows').innerHTML = categories.map(function(c){
     return '<div class="row"><span class="icon">'+c.icon+'</span>'+
-      '<span class="name">'+c.name+'<span class="sub">'+c.sub+'</span></span>'+
+      '<span class="name">'+c.name+'<span class="sub">'+(c.sub||'')+'</span></span>'+
       '<span class="pct" id="pct-'+c.id+'"></span>'+
       '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" data-id="'+c.id+'" value="'+c.value+'"></span>'+
-      '</div>';
+      '<span class="row-actions">'+
+      '<button type="button" class="iconbtn save cat-save" data-id="'+c.id+'" title="Salvar agora">✓</button>'+
+      '<button type="button" class="iconbtn danger cat-del" data-id="'+c.id+'" title="Excluir categoria">🗑</button>'+
+      '</span></div>';
   }).join('');
   categories.forEach(function(c){ document.getElementById('pct-'+c.id).textContent=Math.round(c.value/total()*100)+'%'; });
   document.getElementById('cat-total').textContent=brl(total());
@@ -478,13 +572,39 @@ function renderCatRows(){
       renderBudget(); renderPainel(); scheduleSave();
     });
   });
+  document.querySelectorAll('.cat-save').forEach(function(btn){
+    btn.addEventListener('click', function(){ saveNow(); });
+  });
+  document.querySelectorAll('.cat-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(!confirm('Excluir esta categoria do orçamento?')) return;
+      categories=categories.filter(function(x){return x.id!==btn.dataset.id;});
+      selectedCat=null;
+      renderBudget(); renderPainel(); scheduleSave();
+    });
+  });
 }
+document.getElementById('add-cat').addEventListener('click', function(){
+  var nameInp=document.getElementById('new-cat-name');
+  var valInp=document.getElementById('new-cat-value');
+  var name=nameInp.value.trim();
+  var value=Math.max(0, Number(valInp.value)||0);
+  if(!name) return;
+  var palette=['#E8A33D','#B0503F','#4A9B8E','#5B7FBD','#8570A8'];
+  var color=palette[categories.length % palette.length];
+  categories.push({id:'cat_'+Date.now(),name:name,sub:'',icon:'💰',color:color,def:value,value:value});
+  nameInp.value=''; valInp.value='';
+  renderBudget(); renderPainel(); scheduleSave();
+});
 function renderLegRows(){
   document.getElementById('leg-rows').innerHTML = legs.map(function(l){
     return '<div class="row"><span class="icon">📍</span>'+
       '<span class="name">'+l.name+'<span class="sub">'+l.days+' dias</span></span>'+
       '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" data-id="'+l.id+'" value="'+l.value+'"></span>'+
-      '</div>';
+      '<span class="row-actions">'+
+      '<button type="button" class="iconbtn save leg-save" data-id="'+l.id+'" title="Salvar agora">✓</button>'+
+      '<button type="button" class="iconbtn danger leg-del" data-id="'+l.id+'" title="Excluir trecho">🗑</button>'+
+      '</span></div>';
   }).join('');
   document.getElementById('leg-total').textContent=brl(legTotal());
   document.querySelectorAll('#leg-rows input').forEach(function(inp){
@@ -495,7 +615,29 @@ function renderLegRows(){
       renderLegBar(); scheduleSave();
     });
   });
+  document.querySelectorAll('.leg-save').forEach(function(btn){
+    btn.addEventListener('click', function(){ saveNow(); });
+  });
+  document.querySelectorAll('.leg-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(!confirm('Excluir este trecho do orçamento?')) return;
+      legs=legs.filter(function(x){return x.id!==btn.dataset.id;});
+      renderLegRows(); renderLegBar(); scheduleSave();
+    });
+  });
 }
+document.getElementById('add-leg').addEventListener('click', function(){
+  var nameInp=document.getElementById('new-leg-name');
+  var daysInp=document.getElementById('new-leg-days');
+  var valInp=document.getElementById('new-leg-value');
+  var name=nameInp.value.trim();
+  var days=Math.max(1, Number(daysInp.value)||1);
+  var value=Math.max(0, Number(valInp.value)||0);
+  if(!name) return;
+  legs.push({id:'leg_'+Date.now(),name:name,days:days,value:value});
+  nameInp.value=''; daysInp.value=''; valInp.value='';
+  renderLegRows(); renderLegBar(); scheduleSave();
+});
 function renderBudget(){
   renderCards(); renderGauge(); renderLegend(); renderDetail(); renderDonut(); renderCatRows();
 }
@@ -506,16 +648,40 @@ document.getElementById('reset-cat').addEventListener('click', function(){
 
 // ---------- CHECKLIST ----------
 function renderChecklist(){
-  document.getElementById('check-list').innerHTML = checklistItems.map(function(txt,i){
-    var checked=checklistChecked[i];
-    return '<label class="check-item'+(checked?' done':'')+'" id="ci-'+i+'"><input type="checkbox" onchange="toggleCheck('+i+')" '+(checked?'checked':'')+'><span>'+txt+'</span></label>';
+  document.getElementById('check-list').innerHTML = checklist.map(function(item){
+    return '<label class="check-item'+(item.checked?' done':'')+'" id="ci-'+item.id+'">'+
+      '<input type="checkbox" data-id="'+item.id+'" class="check-toggle" '+(item.checked?'checked':'')+'>'+
+      '<span>'+item.text+'</span>'+
+      '<span class="row-actions"><button type="button" class="iconbtn danger check-del" data-id="'+item.id+'" title="Excluir">✕</button></span>'+
+      '</label>';
   }).join('');
+  document.querySelectorAll('.check-toggle').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var item=checklist.find(function(x){return x.id===inp.dataset.id;});
+      item.checked=inp.checked;
+      document.getElementById('ci-'+item.id).classList.toggle('done',item.checked);
+      scheduleSave();
+    });
+  });
+  document.querySelectorAll('.check-del').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      checklist=checklist.filter(function(x){return x.id!==btn.dataset.id;});
+      renderChecklist();
+      scheduleSave();
+    });
+  });
 }
-window.toggleCheck=function(i){
-  checklistChecked[i]=!checklistChecked[i];
-  document.getElementById('ci-'+i).classList.toggle('done');
+document.getElementById('add-check').addEventListener('click', function(){
+  var inp=document.getElementById('new-check-text');
+  var txt=inp.value.trim();
+  if(!txt) return;
+  checklist.push({id:'c_'+Date.now(),text:txt,checked:false});
+  inp.value='';
+  renderChecklist();
   scheduleSave();
-};
+});
 
 // ---------- SUPABASE (armazenamento em nuvem) ----------
 var SUPABASE_URL = 'https://alrpnvctcooernsdddax.supabase.co';
@@ -538,10 +704,11 @@ function scheduleSave(){
 
 function saveNow(){
   var payload={
-    categories:categories.map(function(c){return {id:c.id,value:c.value};}),
-    legs:legs.map(function(l){return {id:l.id,value:l.value};}),
+    categories:categories,
+    legs:legs,
     startdate:document.getElementById('startdate').value,
-    checklistChecked:checklistChecked
+    checklist:checklist,
+    itinerary:itinerary
   };
   sb.schema('viagem').from('trip_state').upsert({id:TRIP_ID,payload:payload,updated_at:new Date().toISOString()}).then(function(res){
     if(res.error){ setSaveStatus('Erro ao salvar','var(--danger)'); console.error(res.error); }
@@ -555,10 +722,12 @@ function loadState(){
   return sb.schema('viagem').from('trip_state').select('payload').eq('id',TRIP_ID).single().then(function(res){
     if(res.error || !res.data){ setSaveStatus('Nenhum dado salvo ainda — primeira edição vai criar','var(--muted)'); return; }
     var p=res.data.payload;
-    if(p.categories){ p.categories.forEach(function(pc){ var c=categories.find(function(x){return x.id===pc.id;}); if(c) c.value=pc.value; }); }
-    if(p.legs){ p.legs.forEach(function(pl){ var l=legs.find(function(x){return x.id===pl.id;}); if(l) l.value=pl.value; }); }
+    if(p.categories && p.categories.length){ categories=p.categories; }
+    if(p.legs && p.legs.length){ legs=p.legs; }
     if(p.startdate){ document.getElementById('startdate').value=p.startdate; }
-    if(p.checklistChecked){ checklistChecked=p.checklistChecked; }
+    if(p.checklist){ checklist=p.checklist; }
+    else if(p.checklistChecked){ checklist.forEach(function(item,i){ item.checked=!!p.checklistChecked[i]; }); }
+    if(p.itinerary && p.itinerary.length){ itinerary=p.itinerary; }
     setSaveStatus('Salvo ✓','var(--success)');
   });
 }
