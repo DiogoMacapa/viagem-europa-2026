@@ -103,9 +103,6 @@
   .popup-title{font-family:'Bebas Neue',sans-serif;font-size:16px;margin:0 0 4px;color:var(--amber);}
   .popup-link{font-size:12px;color:var(--teal);cursor:pointer;}
 
-  .check-item{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;cursor:pointer;}
-  .check-item input{width:16px;height:16px;accent-color:var(--amber);}
-  .check-item.done span{text-decoration:line-through;color:var(--muted);}
   .tips-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:1.5rem;}
   .tip-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.5;color:var(--muted);}
   .tip-card b{display:block;color:var(--cream);font-size:13px;margin-bottom:4px;}
@@ -127,8 +124,6 @@
   .btn-save{background:var(--amber);border:none;color:var(--bg);font-weight:500;}
   .btn-cancel{background:none;border:1px solid var(--border);color:var(--muted);}
   .day-head-actions{display:flex;gap:6px;align-items:center;}
-  .check-item{position:relative;}
-  .check-item .row-actions{margin-left:auto;}
 </style>
 </head>
 <body>
@@ -145,7 +140,6 @@
     <button class="tab" data-tab="roteiro">Roteiro</button>
     <button class="tab" data-tab="mapa">Mapa</button>
     <button class="tab" data-tab="orcamento">Orçamento</button>
-    <button class="tab" data-tab="checklist">Checklist</button>
   </div>
 
   <!-- PAINEL -->
@@ -188,15 +182,24 @@
 
     <div class="subpanel active" id="sub-geral">
       <div class="cards" id="cards"></div>
-      <p class="gauge-label">Meta declarada: entre R$ 25.000 e R$ 30.000</p>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <span class="gauge-label" style="margin:0;">Meta: R$</span>
+        <input type="number" id="goal-min" step="500" min="0" style="width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:6px 8px;">
+        <span class="hint">até R$</span>
+        <input type="number" id="goal-max" step="500" min="0" style="width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:6px 8px;">
+      </div>
       <div class="gauge-track"><div class="gauge-zone" id="gauge-zone"></div><div class="gauge-marker" id="gauge-marker"></div></div>
-      <div class="gauge-scale"><span>R$ 20k</span><span>R$ 35k</span></div>
+      <div class="gauge-scale"><span id="scale-lo"></span><span id="scale-hi"></span></div>
       <p id="gauge-status"></p>
       <div class="chart-row">
         <div class="chart-box"><canvas id="donut"></canvas></div>
         <div class="legend" id="legend"></div>
       </div>
       <div id="detail">Clique em uma fatia do gráfico ou em uma categoria na legenda para ver o detalhe por dia e por pessoa.</div>
+
+      <h2 class="section" style="font-size:16px;margin:2rem 0 8px;">Onde o dinheiro está indo</h2>
+      <div class="progress-track" id="spend-track"></div>
+      <p class="hint" id="spend-label" style="margin-top:6px;"></p>
     </div>
 
     <div class="subpanel" id="sub-cat" style="display:none;">
@@ -233,29 +236,11 @@
       <div class="add-row">
         <input type="text" id="new-exp-desc" placeholder="Descrição (ex: Hotel Paris)">
         <select id="new-exp-cat" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;"></select>
+        <select id="new-exp-leg" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;"></select>
         <input type="number" id="new-exp-value" placeholder="Valor R$" step="10" min="0">
         <button id="add-exp">+ Adicionar despesa</button>
       </div>
       <div class="total-line" style="margin-top:1rem;"><span>Total lançado</span><span class="value" id="exp-total"></span></div>
-    </div>
-  </div>
-
-  <!-- CHECKLIST -->
-  <div class="panel" id="panel-checklist">
-    <h2 class="section" style="font-size:16px;">Reservar antes de sair do Brasil</h2>
-    <div id="check-list"></div>
-    <div class="add-row">
-      <input type="text" id="new-check-text" placeholder="Novo item do checklist...">
-      <button id="add-check">+ Adicionar item</button>
-    </div>
-
-    <div class="tips-grid">
-      <div class="tip-card"><b>💸 Economia</b>Aparts com cozinha economizam no café da manhã e em jantares caseiros — pode liberar R$300-400 extras para passeios.</div>
-      <div class="tip-card"><b>🚄 Trens</b>SNCF e Trenitalia têm tarifas promocionais que somem 60-90 dias antes da viagem. Reserve assim que fechar as datas.</div>
-      <div class="tip-card"><b>🎄 Mercados de Natal</b>O passeio em si é grátis — gaste só no vinho quente/lanche, evite compras por impulso nas barracas de suvenir.</div>
-      <div class="tip-card"><b>🎫 Paris Visite / Navigo</b>Vale a pena para os 5 dias intensos em Paris.</div>
-      <div class="tip-card"><b>❌ Eurail</b>Não compensa para este roteiro — distâncias curtas e específicas, bilhetes individuais antecipados saem mais baratos.</div>
-      <div class="tip-card"><b>🛟 Seguro viagem</b>Verifique cobertura para idosos (sublimite de idade) e pediátrica antes de comprar.</div>
     </div>
   </div>
 
@@ -310,13 +295,6 @@ var legs = [
   {id:'portofino', name:'Portofino', days:4, value:5610}
 ];
 var expenses=[];
-var checklist=[
-  {id:'c1',text:'Passagens de trem Paris → Strasbourg e trechos italianos',checked:false},
-  {id:'c2',text:'Voo Strasbourg → Milão (low-cost)',checked:false},
-  {id:'c3',text:'Hospedagem em Strasbourg (alta temporada por causa do mercado de Natal)',checked:false},
-  {id:'c4',text:'Seguro viagem com cobertura para idosos e pediátrica',checked:false},
-  {id:'c5',text:'Ingresso do Louvre com horário marcado',checked:false}
-];
 
 var DAYS=18, PESSOAS=3, MIN_R=25000, MAX_R=30000;
 var donutChart=null, legChart=null, selectedCat=null, map=null;
@@ -336,6 +314,7 @@ document.querySelectorAll('.tab').forEach(function(btn){
     btn.classList.add('active');
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab==='mapa'){ setTimeout(function(){ if(map) map.invalidateSize(); },50); }
+    if(btn.dataset.tab!=='orcamento'){ history.replaceState(null,'','#'+btn.dataset.tab); }
   });
 });
 document.querySelectorAll('.subtab').forEach(function(btn){
@@ -344,6 +323,7 @@ document.querySelectorAll('.subtab').forEach(function(btn){
     document.querySelectorAll('.subpanel').forEach(function(p){ p.style.display='none'; });
     btn.classList.add('active'); btn.style.color='var(--amber)'; btn.style.borderColor='var(--amber)';
     document.getElementById('sub-'+btn.dataset.sub).style.display='block';
+    history.replaceState(null,'','#orcamento-'+btn.dataset.sub);
   });
 });
 
@@ -522,17 +502,28 @@ function renderCards(){
     '<div class="card"><p class="label">Por pessoa / dia</p><p class="value">'+brl(perPersonDay)+'</p></div>';
 }
 function renderGauge(){
-  var t=total(), lo=20000, hi=35000;
+  var t=total();
+  var lo=Math.max(0,MIN_R-8000), hi=MAX_R+8000;
   function pct(v){ return Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100)); }
   var zs=pct(MIN_R), ze=pct(MAX_R);
   var zone=document.getElementById('gauge-zone');
   zone.style.left=zs+'%'; zone.style.width=(ze-zs)+'%';
   document.getElementById('gauge-marker').style.left='calc('+pct(t)+'% - 1.5px)';
+  document.getElementById('scale-lo').textContent='R$ '+Math.round(lo/1000)+'k';
+  document.getElementById('scale-hi').textContent='R$ '+Math.round(hi/1000)+'k';
   var status=document.getElementById('gauge-status');
   if(t<MIN_R){ status.innerHTML='✓ '+brl(MIN_R-t)+' abaixo do piso — ainda há folga no orçamento.'; status.style.color='var(--success)'; }
-  else if(t>MAX_R){ status.innerHTML='⚠ '+brl(t-MAX_R)+' acima do teto de R$ 30.000.'; status.style.color='var(--danger)'; }
+  else if(t>MAX_R){ status.innerHTML='⚠ '+brl(t-MAX_R)+' acima do teto de '+brl(MAX_R)+'.'; status.style.color='var(--danger)'; }
   else{ status.innerHTML='✓ Dentro da faixa planejada.'; status.style.color='var(--success)'; }
 }
+document.getElementById('goal-min').addEventListener('input', function(){
+  MIN_R=Math.max(0, Number(this.value)||0);
+  renderGauge(); renderPainel(); scheduleSave();
+});
+document.getElementById('goal-max').addEventListener('input', function(){
+  MAX_R=Math.max(0, Number(this.value)||0);
+  renderGauge(); renderPainel(); scheduleSave();
+});
 function renderLegend(){
   document.getElementById('legend').innerHTML = categories.map(function(c){
     var pct=Math.round(catValue(c)/total()*100);
@@ -666,6 +657,33 @@ document.getElementById('add-leg').addEventListener('click', function(){
   renderLegRows(); renderLegBar(); scheduleSave();
 });
 function expTotal(){ return expenses.reduce(function(a,e){return a+e.value;},0); }
+function legSelectOptions(selectedId){
+  var html='<option value="">— sem trecho —</option>';
+  legOrder.forEach(function(lid){ html+='<option value="'+lid+'"'+(lid===selectedId?' selected':'')+'>'+legMeta[lid].name+'</option>'; });
+  return html;
+}
+function renderSpendMap(){
+  var track=document.getElementById('spend-track');
+  var label=document.getElementById('spend-label');
+  track.innerHTML='';
+  var sums=legOrder.map(function(lid){ return {lid:lid, sum:expenses.filter(function(e){return e.legId===lid;}).reduce(function(a,e){return a+e.value;},0)}; });
+  var spendWithLeg=sums.reduce(function(a,s){return a+s.sum;},0);
+  if(spendWithLeg<=0){
+    label.textContent='Vincule despesas a um trecho (ex: Hotel Paris → Paris) para ver aqui como o gasto real se distribui pela viagem.';
+    return;
+  }
+  sums.forEach(function(s){
+    if(s.sum<=0) return;
+    var lm=legMeta[s.lid];
+    var seg=document.createElement('div');
+    seg.className='progress-seg';
+    seg.style.width=(s.sum/spendWithLeg*100)+'%';
+    seg.style.background=lm.color;
+    seg.textContent = s.sum/spendWithLeg>0.1 ? lm.name.split(' ')[0]+' · '+brl(s.sum) : '';
+    track.appendChild(seg);
+  });
+  label.textContent=brl(spendWithLeg)+' já lançados com trecho definido, de '+brl(expTotal())+' em despesas no total.';
+}
 function renderExpenseSummary(){
   document.getElementById('exp-summary').innerHTML = categories.map(function(c){
     var exps=catExpenses(c.id);
@@ -676,6 +694,7 @@ function renderExpenseSummary(){
 function renderExpenseCatOptions(){
   var sel=document.getElementById('new-exp-cat');
   sel.innerHTML=categories.map(function(c){ return '<option value="'+c.id+'">'+c.icon+' '+c.name+'</option>'; }).join('');
+  document.getElementById('new-exp-leg').innerHTML=legSelectOptions('');
 }
 function renderExpenseRows(){
   document.getElementById('exp-rows').innerHTML = expenses.map(function(e){
@@ -684,6 +703,7 @@ function renderExpenseRows(){
     return '<div class="row"><span class="icon">'+(cat?cat.icon:'💰')+'</span>'+
       '<input type="text" class="exp-desc" data-id="'+e.id+'" value="'+esc(e.desc)+'" style="flex:1;min-width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
       '<select class="exp-cat" data-id="'+e.id+'" style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:8px 6px;">'+opts+'</select>'+
+      '<select class="exp-leg" data-id="'+e.id+'" style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:8px 6px;">'+legSelectOptions(e.legId)+'</select>'+
       '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" class="exp-val" step="10" min="0" data-id="'+e.id+'" value="'+e.value+'"></span>'+
       '<span class="row-actions"><button type="button" class="iconbtn danger exp-del" data-id="'+e.id+'" title="Excluir">🗑</button></span>'+
       '</div>';
@@ -703,12 +723,19 @@ function renderExpenseRows(){
       renderBudget(); renderPainel(); scheduleSave();
     });
   });
+  document.querySelectorAll('.exp-leg').forEach(function(sel){
+    sel.addEventListener('change', function(){
+      var e=expenses.find(function(x){return x.id===sel.dataset.id;});
+      e.legId=sel.value;
+      renderSpendMap(); scheduleSave();
+    });
+  });
   document.querySelectorAll('.exp-val').forEach(function(inp){
     inp.addEventListener('input', function(){
       var e=expenses.find(function(x){return x.id===inp.dataset.id;});
       e.value=Math.max(0, Number(inp.value)||0);
       document.getElementById('exp-total').textContent=brl(expTotal());
-      renderExpenseSummary();
+      renderExpenseSummary(); renderSpendMap();
       renderCards(); renderGauge(); renderLegend(); renderDetail(); renderDonut(); renderPainel();
       scheduleSave();
     });
@@ -724,58 +751,22 @@ function renderExpenseRows(){
 document.getElementById('add-exp').addEventListener('click', function(){
   var descInp=document.getElementById('new-exp-desc');
   var catSel=document.getElementById('new-exp-cat');
+  var legSel=document.getElementById('new-exp-leg');
   var valInp=document.getElementById('new-exp-value');
   var desc=descInp.value.trim();
   var value=Math.max(0, Number(valInp.value)||0);
   if(!desc || !catSel.value) return;
-  expenses.push({id:'exp_'+Date.now(),categoryId:catSel.value,desc:desc,value:value});
+  expenses.push({id:'exp_'+Date.now(),categoryId:catSel.value,legId:legSel.value,desc:desc,value:value});
   descInp.value=''; valInp.value='';
   renderBudget(); renderPainel(); scheduleSave();
 });
 function renderBudget(){
   renderCards(); renderGauge(); renderLegend(); renderDetail(); renderDonut(); renderCatRows();
-  renderExpenseCatOptions(); renderExpenseRows(); renderExpenseSummary();
+  renderExpenseCatOptions(); renderExpenseRows(); renderExpenseSummary(); renderSpendMap();
 }
 document.getElementById('reset-cat').addEventListener('click', function(){
   categories.forEach(function(c){ c.value=c.def; });
   renderBudget(); renderPainel(); scheduleSave();
-});
-
-// ---------- CHECKLIST ----------
-function renderChecklist(){
-  document.getElementById('check-list').innerHTML = checklist.map(function(item){
-    return '<label class="check-item'+(item.checked?' done':'')+'" id="ci-'+item.id+'">'+
-      '<input type="checkbox" data-id="'+item.id+'" class="check-toggle" '+(item.checked?'checked':'')+'>'+
-      '<span>'+item.text+'</span>'+
-      '<span class="row-actions"><button type="button" class="iconbtn danger check-del" data-id="'+item.id+'" title="Excluir">✕</button></span>'+
-      '</label>';
-  }).join('');
-  document.querySelectorAll('.check-toggle').forEach(function(inp){
-    inp.addEventListener('change', function(){
-      var item=checklist.find(function(x){return x.id===inp.dataset.id;});
-      item.checked=inp.checked;
-      document.getElementById('ci-'+item.id).classList.toggle('done',item.checked);
-      scheduleSave();
-    });
-  });
-  document.querySelectorAll('.check-del').forEach(function(btn){
-    btn.addEventListener('click', function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      checklist=checklist.filter(function(x){return x.id!==btn.dataset.id;});
-      renderChecklist();
-      scheduleSave();
-    });
-  });
-}
-document.getElementById('add-check').addEventListener('click', function(){
-  var inp=document.getElementById('new-check-text');
-  var txt=inp.value.trim();
-  if(!txt) return;
-  checklist.push({id:'c_'+Date.now(),text:txt,checked:false});
-  inp.value='';
-  renderChecklist();
-  scheduleSave();
 });
 
 // ---------- SUPABASE (armazenamento em nuvem) ----------
@@ -802,13 +793,17 @@ function saveNow(){
     categories:categories,
     legs:legs,
     startdate:document.getElementById('startdate').value,
-    checklist:checklist,
     itinerary:itinerary,
-    expenses:expenses
+    expenses:expenses,
+    goalMin:MIN_R,
+    goalMax:MAX_R
   };
   sb.schema('viagem').from('trip_state').upsert({id:TRIP_ID,payload:payload,updated_at:new Date().toISOString()}).then(function(res){
-    if(res.error){ setSaveStatus('Erro ao salvar','var(--danger)'); console.error(res.error); }
-    else{ setSaveStatus('Salvo ✓','var(--success)'); }
+    if(res.error){
+      setSaveStatus('Erro ao salvar — tentando de novo…','var(--danger)');
+      console.error(res.error);
+      setTimeout(saveNow,2500);
+    } else{ setSaveStatus('Salvo ✓','var(--success)'); }
   });
 }
 
@@ -821,15 +816,30 @@ function loadState(){
     if(p.categories && p.categories.length){ categories=p.categories; }
     if(p.legs && p.legs.length){ legs=p.legs; }
     if(p.startdate){ document.getElementById('startdate').value=p.startdate; }
-    if(p.checklist){ checklist=p.checklist; }
-    else if(p.checklistChecked){ checklist.forEach(function(item,i){ item.checked=!!p.checklistChecked[i]; }); }
     if(p.itinerary && p.itinerary.length){ itinerary=p.itinerary; }
     if(p.expenses){ expenses=p.expenses; }
+    if(p.goalMin!=null){ MIN_R=p.goalMin; }
+    if(p.goalMax!=null){ MAX_R=p.goalMax; }
     setSaveStatus('Salvo ✓','var(--success)');
   });
 }
 
 // ---------- INIT ----------
+function restoreTabFromHash(){
+  var hash=location.hash.replace('#','');
+  if(!hash) return;
+  var parts=hash.split('-');
+  var tabBtn=document.querySelector('.tab[data-tab="'+parts[0]+'"]');
+  if(tabBtn) tabBtn.click();
+  if(parts[0]==='orcamento' && parts[1]){
+    var subBtn=document.querySelector('.subtab[data-sub="'+parts[1]+'"]');
+    if(subBtn) subBtn.click();
+  }
+}
+function syncGoalInputs(){
+  document.getElementById('goal-min').value=MIN_R;
+  document.getElementById('goal-max').value=MAX_R;
+}
 function init(){
   renderPainel();
   renderItinerary();
@@ -837,14 +847,15 @@ function init(){
   renderBudget();
   renderLegRows();
   renderLegBar();
-  renderChecklist();
+  syncGoalInputs();
   loadState().then(function(){
     renderPainel();
     renderItinerary();
     renderBudget();
     renderLegRows();
     renderLegBar();
-    renderChecklist();
+    syncGoalInputs();
+    restoreTabFromHash();
   });
 }
 init();
