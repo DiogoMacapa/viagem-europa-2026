@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centro de Viagem — Europa 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#161B33; --bg-card:#232A52; --bg-card-alt:#2C3563;
+    --amber:#E8A33D; --wine:#B0503F; --teal:#4A9B8E; --blue:#5B7FBD; --violet:#8570A8;
+    --cream:#F3EEE2; --muted:#8991B8; --border:#3A4278; --success:#5AA88A; --danger:#C1594A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1000px;margin:0 auto;padding:2.5rem 1.5rem 4rem;}
+  header{margin-bottom:1.75rem;}
+  .kicker{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin:0 0 6px;}
+  h1{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:.02em;margin:0 0 10px;line-height:1;}
+  .route{display:flex;flex-wrap:wrap;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .route b{color:var(--cream);font-weight:500;}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:1.75rem;overflow-x:auto;position:sticky;top:0;background:var(--bg);z-index:20;padding-top:4px;}
+  .tab{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:none;border:none;padding:12px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s;}
+  .tab:hover{color:var(--cream);}
+  .tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+  .panel{display:none;}
+  .panel.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+  h2.section{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.02em;margin:0 0 14px;color:var(--cream);}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:1.75rem;}
+  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .card .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;}
+  .card .value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;margin:0;color:var(--amber);}
+  .card.status .value{font-size:14px;font-family:'Inter';color:var(--cream);}
+  .gauge-label{font-size:12px;color:var(--muted);margin:0 0 8px;}
+  .gauge-track{position:relative;height:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;}
+  .gauge-zone{position:absolute;top:0;height:100%;background:rgba(90,168,138,0.35);border-radius:6px;}
+  .gauge-marker{position:absolute;top:-5px;width:3px;height:20px;background:var(--amber);border-radius:2px;box-shadow:0 0 6px var(--amber);}
+  .gauge-scale{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:6px;}
+  #gauge-status{font-size:13px;margin:0 0 2rem;}
+  .chart-row{display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1.5rem;}
+  .chart-box{position:relative;width:230px;height:230px;flex-shrink:0;}
+  .legend{flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px;}
+  .legend-item{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;padding:6px 8px;border-radius:6px;transition:background .15s;}
+  .legend-item:hover{background:var(--bg-card);}
+  .swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+  .legend-item .name{flex:1;}
+  .legend-item .pct{font-family:'IBM Plex Mono',monospace;color:var(--muted);font-size:12px;}
+  #detail{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--muted);min-height:20px;}
+  #detail strong{color:var(--amber);font-weight:600;}
+  .row{display:flex;align-items:center;gap:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;}
+  .row .icon{font-size:18px;width:22px;text-align:center;}
+  .row .name{flex:1;font-size:14px;}
+  .row .name .sub{display:block;font-size:11px;color:var(--muted);margin-top:2px;}
+  .row .pct{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);width:38px;text-align:right;}
+  .row input{width:130px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:14px;padding:8px 10px;text-align:right;}
+  .row input:focus{outline:none;border-color:var(--amber);}
+  .row-inputwrap{display:flex;align-items:center;gap:4px;}
+  .prefix{font-family:'IBM Plex Mono',monospace;color:var(--muted);font-size:13px;}
+  .total-line{display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:14px;padding-top:14px;font-size:16px;}
+  .total-line .value{font-family:'IBM Plex Mono',monospace;color:var(--amber);font-weight:500;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px;}
+  .hint{font-size:13px;color:var(--muted);}
+  button.reset{background:none;border:1px solid var(--border);color:var(--cream);border-radius:6px;padding:8px 14px;font-size:12px;font-family:'Inter';cursor:pointer;}
+  button.reset:hover{border-color:var(--amber);color:var(--amber);}
+  .barchart-box{position:relative;width:100%;height:260px;}
+  footer{margin-top:2.5rem;font-size:12px;color:var(--muted);text-align:center;}
+
+  .datebar{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:1.5rem;flex-wrap:wrap;}
+  .datebar label{font-size:12px;color:var(--muted);}
+  .datebar input[type=date]{background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:6px 10px;}
+  .progress-track{position:relative;height:26px;border-radius:6px;overflow:hidden;display:flex;margin-bottom:6px;}
+  .progress-seg{position:relative;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--cream);}
+  .progress-marker{position:absolute;top:-6px;width:3px;height:38px;background:var(--amber);box-shadow:0 0 6px var(--amber);border-radius:2px;z-index:5;}
+  #today-card{background:var(--bg-card);border:1px solid var(--amber);border-radius:10px;padding:16px 18px;margin-top:1.5rem;}
+  #today-card .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;}
+  #today-card h3{font-family:'Bebas Neue',sans-serif;font-size:22px;margin:0 0 10px;}
+
+  .leg-group{margin-bottom:1.75rem;}
+  .leg-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.02em;color:var(--amber);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  .day-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;scroll-margin-top:70px;}
+  .day-card.is-today{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber);}
+  .day-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .day-head .daynum{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .day-head h3{font-family:'Bebas Neue',sans-serif;font-size:19px;margin:2px 0 0;letter-spacing:.01em;}
+  .day-head .dpill{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--bg);background:var(--amber);padding:3px 8px;border-radius:20px;font-weight:500;}
+  .period{display:grid;grid-template-columns:70px 1fr;gap:10px;margin-bottom:8px;font-size:13px;line-height:1.5;}
+  .period b{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;}
+  .maplinks{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
+  .maplinks a{font-size:11px;color:var(--teal);text-decoration:none;border:1px solid var(--border);border-radius:20px;padding:4px 10px;}
+  .maplinks a:hover{border-color:var(--teal);}
+  .tip{font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;margin-top:8px;}
+  .tip b{color:var(--amber);}
+
+  #map{width:100%;height:440px;border-radius:10px;border:1px solid var(--border);margin-bottom:1rem;}
+  .leaflet-popup-content-wrapper{background:var(--bg-card);color:var(--cream);border-radius:8px;}
+  .leaflet-popup-tip{background:var(--bg-card);}
+  .popup-title{font-family:'Bebas Neue',sans-serif;font-size:16px;margin:0 0 4px;color:var(--amber);}
+  .popup-link{font-size:12px;color:var(--teal);cursor:pointer;}
+
+  .check-item{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;cursor:pointer;}
+  .check-item input{width:16px;height:16px;accent-color:var(--amber);}
+  .check-item.done span{text-decoration:line-through;color:var(--muted);}
+  .tips-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:1.5rem;}
+  .tip-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.5;color:var(--muted);}
+  .tip-card b{display:block;color:var(--cream);font-size:13px;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="kicker">Centro de viagem · nov/dez 2026</p>
+    <h1>Europa em Reais</h1>
+    <div class="route"><b>Paris</b> · <b>Strasbourg</b> · <b>Colmar</b> · <b>Milão</b> · <b>Lago di Garda</b> · <b>Portofino</b> — 18 dias · 3 pessoas</div>
+    <p id="save-status" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin:10px 0 0;">Conectando…</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="painel">Painel</button>
+    <button class="tab" data-tab="roteiro">Roteiro</button>
+    <button class="tab" data-tab="mapa">Mapa</button>
+    <button class="tab" data-tab="orcamento">Orçamento</button>
+    <button class="tab" data-tab="checklist">Checklist</button>
+  </div>
+
+  <!-- PAINEL -->
+  <div class="panel active" id="panel-painel">
+    <div class="datebar">
+      <label for="startdate">Data de início da viagem</label>
+      <input type="date" id="startdate" value="2026-11-28">
+      <span class="hint" id="countdown-text"></span>
+    </div>
+
+    <div class="cards" id="painel-cards"></div>
+
+    <h2 class="section" style="font-size:16px;margin-bottom:8px;">Linha do tempo da viagem</h2>
+    <div class="progress-track" id="progress-track"></div>
+    <p class="hint" id="progress-label" style="margin:0 0 1.5rem;"></p>
+
+    <div id="today-card" style="display:none;"></div>
+  </div>
+
+  <!-- ROTEIRO -->
+  <div class="panel" id="panel-roteiro">
+    <p class="hint" style="margin-bottom:1.25rem;">Roteiro completo, agrupado por trecho. O dia atual (conforme a data de início definida no Painel) fica destacado em âmbar.</p>
+    <div id="itinerary-list"></div>
+  </div>
+
+  <!-- MAPA -->
+  <div class="panel" id="panel-mapa">
+    <p class="hint" style="margin-bottom:1rem;">Clique em um marcador para ver os dias daquele trecho e pular direto para o roteiro.</p>
+    <div id="map"></div>
+  </div>
+
+  <!-- ORÇAMENTO -->
+  <div class="panel" id="panel-orcamento">
+    <div class="tabs" style="border-bottom:none;margin-bottom:1.25rem;padding-top:0;position:static;">
+      <button class="subtab active" data-sub="geral" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Visão geral</button>
+      <button class="subtab" data-sub="cat" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Categorias</button>
+      <button class="subtab" data-sub="trechos" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;">Trechos</button>
+    </div>
+
+    <div class="subpanel active" id="sub-geral">
+      <div class="cards" id="cards"></div>
+      <p class="gauge-label">Meta declarada: entre R$ 25.000 e R$ 30.000</p>
+      <div class="gauge-track"><div class="gauge-zone" id="gauge-zone"></div><div class="gauge-marker" id="gauge-marker"></div></div>
+      <div class="gauge-scale"><span>R$ 20k</span><span>R$ 35k</span></div>
+      <p id="gauge-status"></p>
+      <div class="chart-row">
+        <div class="chart-box"><canvas id="donut"></canvas></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div id="detail">Clique em uma fatia do gráfico ou em uma categoria na legenda para ver o detalhe por dia e por pessoa.</div>
+    </div>
+
+    <div class="subpanel" id="sub-cat" style="display:none;">
+      <div class="toolbar">
+        <p class="hint">Edite o valor total estimado de cada categoria (para a viagem inteira, em R$)</p>
+        <button class="reset" id="reset-cat">↺ Restaurar estimativa original</button>
+      </div>
+      <div id="cat-rows"></div>
+      <div class="total-line"><span>Total</span><span class="value" id="cat-total"></span></div>
+    </div>
+
+    <div class="subpanel" id="sub-trechos" style="display:none;">
+      <p class="hint" style="margin-bottom:1rem;">Mesmo orçamento, dividido por trecho/cidade da viagem</p>
+      <div id="leg-rows"></div>
+      <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
+      <div class="barchart-box"><canvas id="legbar"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div class="panel" id="panel-checklist">
+    <h2 class="section" style="font-size:16px;">Reservar antes de sair do Brasil</h2>
+    <div id="check-list"></div>
+
+    <div class="tips-grid">
+      <div class="tip-card"><b>💸 Economia</b>Aparts com cozinha economizam no café da manhã e em jantares caseiros — pode liberar R$300-400 extras para passeios.</div>
+      <div class="tip-card"><b>🚄 Trens</b>SNCF e Trenitalia têm tarifas promocionais que somem 60-90 dias antes da viagem. Reserve assim que fechar as datas.</div>
+      <div class="tip-card"><b>🎄 Mercados de Natal</b>O passeio em si é grátis — gaste só no vinho quente/lanche, evite compras por impulso nas barracas de suvenir.</div>
+      <div class="tip-card"><b>🎫 Paris Visite / Navigo</b>Vale a pena para os 5 dias intensos em Paris.</div>
+      <div class="tip-card"><b>❌ Eurail</b>Não compensa para este roteiro — distâncias curtas e específicas, bilhetes individuais antecipados saem mais baratos.</div>
+      <div class="tip-card"><b>🛟 Seguro viagem</b>Verifique cobertura para idosos (sublimite de idade) e pediátrica antes de comprar.</div>
+    </div>
+  </div>
+
+  <footer>Sistema vivo — ajuste datas e valores conforme suas reservas reais forem se confirmando.</footer>
+</div>
+
+<script>
+// ---------- DADOS DO ROTEIRO ----------
+var itinerary = [
+ {d:1,leg:'paris',theme:'Chegada em Paris',m:'Voo internacional, chegada, check-in tranquilo.',t:'Ambientação, primeiras compras no mercado local.',n:'Passeio leve pelo bairro do hotel, jantar simples.',tip:'Reserve um apart-hotel com cozinha compacta perto de uma estação de metrô.',maps:[]},
+ {d:2,leg:'paris',theme:'Torre Eiffel e Rio Sena',m:'Torre Eiffel — vá cedo para fugir das filas com criança pequena.',t:'Champ de Mars para piquenique/descanso + Trocadéro para a foto clássica.',n:'Passeio de barco pelo Rio Sena — luzes de Natal nas pontes.',tip:'Compre o ingresso do barco online com desconto family/senior.',maps:[{n:'Torre Eiffel',q:'Torre+Eiffel+Paris'},{n:'Champ de Mars',q:'Champ+de+Mars+Paris'},{n:'Trocadéro',q:'Trocadéro+Paris'}]},
+ {d:3,leg:'paris',theme:'Louvre e Ilha da Cité',m:'Museu do Louvre — foque nos hits (Mona Lisa, Vênus de Milo), 2h bastam.',t:'Notre-Dame de Paris (exterior) e Sainte-Chapelle.',n:'Jantar tranquilo no Bairro Latino.',tip:'Entrada do Louvre é grátis para crianças até 18 anos — leve documento.',maps:[{n:'Museu do Louvre',q:'Museu+do+Louvre'},{n:'Notre-Dame',q:'Notre-Dame+de+Paris'},{n:'Sainte-Chapelle',q:'Sainte-Chapelle+Paris'}]},
+ {d:4,leg:'paris',theme:'Montmartre e Mercados de Natal',m:'Sacré-Cœur e ruas de Montmartre.',t:'Descanso no hotel — importante para o ritmo da criança/idosa.',n:'Mercado de Natal dos Champs-Élysées — vinho quente e luzes.',tip:'O funicular de Montmartre está incluso no bilhete de metrô.',maps:[{n:'Sacré-Cœur',q:'Basílica+de+Sacré-Cœur'},{n:'Montmartre',q:'Montmartre+Paris'},{n:'Mercado Champs-Élysées',q:'Marché+de+Noël+Champs-Élysées'}]},
+ {d:5,leg:'paris',theme:'Le Marais e Galeries Lafayette',m:'Le Marais — ruas charmosas, ótimo para passear com carrinho.',t:'Galeries Lafayette Haussmann — árvore de Natal gigante sob a cúpula, gratuita.',n:'Jantar de despedida de Paris, mala pronta.',tip:'Suba ao terraço panorâmico gratuito da Galeries Lafayette — vista da Torre Eiffel de graça.',maps:[{n:'Le Marais',q:'Le+Marais+Paris'},{n:'Galeries Lafayette',q:'Galeries+Lafayette+Haussmann'}]},
+ {d:6,leg:'strasbourg',theme:'Paris → Strasbourg',m:'Check-out e TGV direto (≈2h20) até Strasbourg.',t:'Check-in e primeiro contato com a cidade.',n:'Marché de Noël de Strasbourg na Place Kléber — a Capital do Natal iluminada.',tip:'Reserve o TGV com 2-3 meses de antecedência — o preço pode triplicar em cima da hora.',maps:[{n:'Mercado de Strasbourg',q:'Marché+de+Noël+Strasbourg'}]},
+ {d:7,leg:'strasbourg',theme:'Strasbourg, Capital do Natal',m:'Catedral de Strasbourg e Petite France, o bairro mais bonito da cidade.',t:'Mercados temáticos pela cidade (Place Broglie, Place de la Cathédrale).',n:'Vinho quente e bredele num café local.',tip:'Compre pain d\'épices e kougelhopf nas padarias — bem mais barato que nas barracas turísticas.',maps:[{n:'Catedral de Strasbourg',q:'Cathédrale+de+Strasbourg'},{n:'Petite France',q:'Petite+France+Strasbourg'}]},
+ {d:8,leg:'strasbourg',theme:'Bate-volta a Colmar',m:'Trem regional até Colmar (30 min).',t:'La Petite Venise e mercados de Natal da cidade antiga.',n:'Retorno a Strasbourg.',tip:'Colmar é pequena — 4-5h bastam. Vá cedo para fotos sem multidão.',maps:[{n:'Colmar',q:'Colmar+França'},{n:'La Petite Venise',q:'La+Petite+Venise+Colmar'}]},
+ {d:9,leg:'milao',theme:'Strasbourg → Milão',m:'Voo low-cost via aeroporto de Basel-Mulhouse-Freiburg (~40min de Strasbourg).',t:'Chegada, check-in.',n:'Jantar leve perto do hotel.',tip:'O EuroAirport tem ônibus direto de Strasbourg — reserve com antecedência.',maps:[]},
+ {d:10,leg:'milao',theme:'Milão Clássica',m:'Duomo di Milano — considere o terraço se o orçamento permitir.',t:'Galleria Vittorio Emanuele II decorada de Natal + Teatro alla Scala (exterior).',n:'Mercatino di Natale da Piazza Duomo.',tip:'A praça do Duomo já é espetacular e gratuita — priorize se o orçamento apertar.',maps:[{n:'Duomo di Milano',q:'Duomo+di+Milano'},{n:'Galleria V. Emanuele II',q:'Galleria+Vittorio+Emanuele+II+Milano'}]},
+ {d:11,leg:'milao',theme:'Castello Sforzesco e Navigli',m:'Castello Sforzesco e seu parque — ótimo espaço para a criança correr.',t:'Descanso / troca de mala.',n:'Navigli — canais charmosos, jantar mais em conta.',tip:'O Parco Sempione é gratuito, ótimo respiro no meio da correria urbana.',maps:[{n:'Castello Sforzesco',q:'Castello+Sforzesco+Milano'},{n:'Navigli',q:'Navigli+Milano'}]},
+ {d:12,leg:'garda',theme:'Milão → Lago di Garda',m:'Trem até Peschiera del Garda ou Desenzano (≈1h10).',t:'Check-in e passeio tranquilo pela orla do lago.',n:'Jantar com vista para o Lago di Garda.',tip:'Desenzano costuma ter hospedagem mais em conta que Sirmione, 15 min dali.',maps:[{n:'Lago di Garda',q:'Lago+di+Garda'}]},
+ {d:13,leg:'garda',theme:'Verona, Clima Medieval de Natal',m:'Casa di Giulietta e Arena di Verona.',t:'Centro histórico.',n:'Mercatino di Natale da Piazza dei Signori.',tip:'A vista da Arena de fora já vale a foto — economize o ingresso se o dia estiver corrido.',maps:[{n:'Casa di Giulietta',q:'Casa+di+Giulietta+Verona'},{n:'Arena di Verona',q:'Arena+di+Verona'},{n:'Piazza dei Signori',q:'Piazza+dei+Signori+Verona'}]},
+ {d:14,leg:'garda',theme:'Sirmione e Relaxamento',m:'Castello Scaligero de Sirmione.',t:'Passeio tranquilo pela península — ótimo ritmo para a idosa e a criança.',n:'Jantar leve, preparar bagagem.',tip:'Dezembro é baixa temporada no Garda — hospedagem cai bastante de preço.',maps:[{n:'Castello Scaligero',q:'Castello+Scaligero+Sirmione'}]},
+ {d:15,leg:'portofino',theme:'Rumo a Portofino',m:'Trem até Genova (≈2h) + baldeação regional até Santa Margherita Ligure (≈30min).',t:'Check-in, primeiro contato com a Riviera Ligure.',n:'Jantar à beira-mar em Santa Margherita Ligure.',tip:'Hospede-se em Santa Margherita ou Rapallo — Portofino cobra 2-3x mais pelo mesmo padrão.',maps:[{n:'Santa Margherita Ligure',q:'Santa+Margherita+Ligure'}]},
+ {d:16,leg:'portofino',theme:'Portofino',m:'Barco local ou ônibus até Portofino — vila colorida e marina icônica.',t:'Trilha curta até o Castello Brown, vista panorâmica acessível mesmo com criança de colo.',n:'Retorno a Santa Margherita para jantar.',tip:'O barco Santa Margherita–Portofino é mais bonito e barato que ir de carro/ônibus.',maps:[{n:'Portofino',q:'Portofino'},{n:'Castello Brown',q:'Castello+Brown+Portofino'}]},
+ {d:17,leg:'portofino',theme:'Camogli ou Descanso',m:'Camogli, vilarejo de pescadores mais autêntico e tranquilo (trem curto).',t:'Tempo livre na orla.',n:'Jantar de despedida da Itália.',tip:'Reserve este dia como "coringa" — se a família estiver cansada, fique só relaxando, sem culpa.',maps:[{n:'Camogli',q:'Camogli'}]},
+ {d:18,leg:'portofino',theme:'Partida',m:'Trem até Genova ou Milão conforme o voo de volta.',t:'Voo internacional de retorno.',n:'—',tip:'Prefira voar de Milão (Malpensa) se a conexão for melhor — Genova tem menos opções.',maps:[]}
+];
+
+var legMeta = {
+  paris:{name:'Paris',color:'#5B7FBD',lat:48.8566,lng:2.3522},
+  strasbourg:{name:'Strasbourg + Colmar',color:'#4A9B8E',lat:48.5734,lng:7.7521},
+  milao:{name:'Milão',color:'#E8A33D',lat:45.4642,lng:9.1900},
+  garda:{name:'Lago di Garda / Verona',color:'#B0503F',lat:45.4384,lng:10.6084},
+  portofino:{name:'Portofino / Santa Margherita',color:'#8570A8',lat:44.3358,lng:9.2114}
+};
+var legOrder=['paris','strasbourg','milao','garda','portofino'];
+
+// ---------- DADOS DO ORÇAMENTO ----------
+var categories = [
+  {id:'hosp', name:'Hospedagem', sub:'aparts e hotéis 3 estrelas', icon:'🏨', color:'#E8A33D', def:10446, value:10446},
+  {id:'alim', name:'Alimentação', sub:'refeições e mercado', icon:'🍽️', color:'#B0503F', def:7152, value:7152},
+  {id:'transp', name:'Transporte interno', sub:'trens e voo low-cost', icon:'🚆', color:'#4A9B8E', def:4398, value:4398},
+  {id:'passeios', name:'Passeios e ingressos', sub:'museus, barcos, castelos', icon:'🎟️', color:'#5B7FBD', def:3300, value:3300},
+  {id:'emerg', name:'Emergências e extras', sub:'imprevistos, seguro extra', icon:'🆘', color:'#8570A8', def:2202, value:2202}
+];
+var legs = [
+  {id:'paris', name:'Paris', days:5, value:9470},
+  {id:'strasbourg', name:'Strasbourg + Colmar', days:3, value:4420},
+  {id:'milao', name:'Milão', days:3, value:4420},
+  {id:'garda', name:'Lago di Garda', days:3, value:3580},
+  {id:'portofino', name:'Portofino', days:4, value:5610}
+];
+var checklistItems=[
+  'Passagens de trem Paris → Strasbourg e trechos italianos',
+  'Voo Strasbourg → Milão (low-cost)',
+  'Hospedagem em Strasbourg (alta temporada por causa do mercado de Natal)',
+  'Seguro viagem com cobertura para idosos e pediátrica',
+  'Ingresso do Louvre com horário marcado'
+];
+var checklistChecked=[false,false,false,false,false];
+
+var DAYS=18, PESSOAS=3, MIN_R=25000, MAX_R=30000;
+var donutChart=null, legChart=null, selectedCat=null, map=null;
+
+function brl(v){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(Math.round(v)); }
+function total(){ return categories.reduce(function(a,c){return a+c.value;},0); }
+function legTotal(){ return legs.reduce(function(a,l){return a+l.value;},0); }
+function fmtDate(dt){ return dt.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'}); }
+
+// ---------- TABS PRINCIPAIS ----------
+document.querySelectorAll('.tab').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='mapa'){ setTimeout(function(){ if(map) map.invalidateSize(); },50); }
+  });
+});
+document.querySelectorAll('.subtab').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.subtab').forEach(function(b){ b.classList.remove('active'); b.style.color='var(--muted)'; b.style.borderColor='var(--border)'; });
+    document.querySelectorAll('.subpanel').forEach(function(p){ p.style.display='none'; });
+    btn.classList.add('active'); btn.style.color='var(--amber)'; btn.style.borderColor='var(--amber)';
+    document.getElementById('sub-'+btn.dataset.sub).style.display='block';
+  });
+});
+
+// ---------- PAINEL ----------
+function getStartDate(){
+  var v=document.getElementById('startdate').value;
+  var parts=v.split('-');
+  return new Date(Number(parts[0]),Number(parts[1])-1,Number(parts[2]));
+}
+function todayMidnight(){ var n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()); }
+
+function renderPainel(){
+  var start=getStartDate();
+  var today=todayMidnight();
+  var diffDays=Math.round((start-today)/86400000);
+  var cur=null, curIndex=-1;
+  itinerary.forEach(function(it,i){
+    var d=new Date(start); d.setDate(d.getDate()+(it.d-1));
+    if(d.getTime()===today.getTime()){ cur=it; curIndex=i; }
+  });
+  var countdown=document.getElementById('countdown-text');
+  if(diffDays>0){ countdown.textContent='Faltam '+diffDays+' dias para embarcar.'; }
+  else if(cur){ countdown.textContent='Você está no dia '+cur.d+' de 18 — aproveite!'; }
+  else if(diffDays<=0 && diffDays>-18){ countdown.textContent='Viagem em andamento.'; }
+  else { countdown.textContent='Viagem já concluída — ótimas memórias!'; }
+
+  document.getElementById('painel-cards').innerHTML =
+    '<div class="card"><p class="label">Orçamento total</p><p class="value">'+brl(total())+'</p></div>'+
+    '<div class="card"><p class="label">Duração</p><p class="value">18 dias</p></div>'+
+    '<div class="card"><p class="label">Cidades</p><p class="value">5</p></div>'+
+    '<div class="card status"><p class="label">Status do orçamento</p><p class="value">'+(total()<=MAX_R&&total()>=MIN_R?'Dentro da meta':(total()>MAX_R?'Acima da meta':'Com folga')) +'</p></div>';
+
+  var track=document.getElementById('progress-track');
+  track.innerHTML='';
+  legOrder.forEach(function(lid){
+    var lm=legMeta[lid];
+    var count=itinerary.filter(function(it){return it.leg===lid;}).length;
+    var seg=document.createElement('div');
+    seg.className='progress-seg';
+    seg.style.width=(count/DAYS*100)+'%';
+    seg.style.background=lm.color;
+    seg.textContent=lm.name.split(' ')[0];
+    track.appendChild(seg);
+  });
+  if(curIndex>=0){
+    var marker=document.createElement('div');
+    marker.className='progress-marker';
+    marker.style.left=(curIndex/DAYS*100)+'%';
+    track.style.position='relative';
+    track.appendChild(marker);
+  }
+  document.getElementById('progress-label').textContent = cur ? ('Hoje: dia '+cur.d+' — '+cur.theme) : 'Ajuste a data de início para acompanhar o dia a dia durante a viagem.';
+
+  var tc=document.getElementById('today-card');
+  if(cur){
+    tc.style.display='block';
+    tc.innerHTML='<p class="tag">Hoje · dia '+cur.d+' de 18</p><h3>'+cur.theme+'</h3>'+
+      '<div class="period"><b>Manhã</b><span>'+cur.m+'</span></div>'+
+      '<div class="period"><b>Tarde</b><span>'+cur.t+'</span></div>'+
+      '<div class="period"><b>Noite</b><span>'+cur.n+'</span></div>'+
+      (cur.tip?'<div class="tip"><b>Dica</b> — '+cur.tip+'</div>':'');
+  } else { tc.style.display='none'; }
+}
+document.getElementById('startdate').addEventListener('change', function(){ renderPainel(); renderItinerary(); scheduleSave(); });
+
+// ---------- ROTEIRO ----------
+function renderItinerary(){
+  var start=getStartDate(); var today=todayMidnight();
+  var html='';
+  legOrder.forEach(function(lid){
+    var lm=legMeta[lid];
+    var days=itinerary.filter(function(it){return it.leg===lid;});
+    html+='<div class="leg-group" id="leg-'+lid+'"><p class="leg-title" style="color:'+lm.color+'">'+lm.name+'</p>';
+    days.forEach(function(it){
+      var d=new Date(start); d.setDate(d.getDate()+(it.d-1));
+      var isToday=d.getTime()===today.getTime();
+      html+='<div class="day-card'+(isToday?' is-today':'')+'" id="day-'+it.d+'">'+
+        '<div class="day-head"><div><span class="daynum">Dia '+it.d+' · '+fmtDate(d)+'</span><h3>'+it.theme+'</h3></div>'+(isToday?'<span class="dpill">Hoje</span>':'')+'</div>'+
+        '<div class="period"><b>Manhã</b><span>'+it.m+'</span></div>'+
+        '<div class="period"><b>Tarde</b><span>'+it.t+'</span></div>'+
+        '<div class="period"><b>Noite</b><span>'+it.n+'</span></div>'+
+        (it.maps.length?'<div class="maplinks">'+it.maps.map(function(mp){return '<a href="https://www.google.com/maps/search/?api=1&query='+mp.q+'" target="_blank" rel="noopener">📍 '+mp.n+'</a>';}).join('')+'</div>':'')+
+        (it.tip?'<div class="tip"><b>Dica</b> — '+it.tip+'</div>':'')+
+        '</div>';
+    });
+    html+='</div>';
+  });
+  document.getElementById('itinerary-list').innerHTML=html;
+}
+
+// ---------- MAPA ----------
+function initMap(){
+  map=L.map('map',{scrollWheelZoom:false}).setView([46.5,7.5],5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(map);
+  var pts=[];
+  legOrder.forEach(function(lid){
+    var lm=legMeta[lid];
+    var days=itinerary.filter(function(it){return it.leg===lid;});
+    var dayNums=days.map(function(it){return it.d;});
+    pts.push([lm.lat,lm.lng]);
+    var marker=L.circleMarker([lm.lat,lm.lng],{radius:10,color:lm.color,fillColor:lm.color,fillOpacity:0.85,weight:2}).addTo(map);
+    var popupHtml='<p class="popup-title">'+lm.name+'</p><p style="font-size:12px;margin:0 0 8px;">Dias '+dayNums[0]+'–'+dayNums[dayNums.length-1]+' do roteiro</p><span class="popup-link" onclick="jumpToLeg(\''+lid+'\')">Ver no roteiro →</span>';
+    marker.bindPopup(popupHtml);
+  });
+  L.polyline(pts,{color:'#8991B8',weight:2,dashArray:'4 6'}).addTo(map);
+  map.fitBounds(pts,{padding:[30,30]});
+}
+window.jumpToLeg=function(lid){
+  document.querySelector('.tab[data-tab="roteiro"]').click();
+  setTimeout(function(){ var el=document.getElementById('leg-'+lid); if(el) el.scrollIntoView({behavior:'smooth'}); },80);
+};
+
+// ---------- ORÇAMENTO ----------
+function renderCards(){
+  var t=total(), perDay=t/DAYS, perPersonDay=perDay/PESSOAS;
+  document.getElementById('cards').innerHTML =
+    '<div class="card"><p class="label">Total estimado</p><p class="value">'+brl(t)+'</p></div>'+
+    '<div class="card"><p class="label">Por dia (família)</p><p class="value">'+brl(perDay)+'</p></div>'+
+    '<div class="card"><p class="label">Por pessoa / dia</p><p class="value">'+brl(perPersonDay)+'</p></div>';
+}
+function renderGauge(){
+  var t=total(), lo=20000, hi=35000;
+  function pct(v){ return Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100)); }
+  var zs=pct(MIN_R), ze=pct(MAX_R);
+  var zone=document.getElementById('gauge-zone');
+  zone.style.left=zs+'%'; zone.style.width=(ze-zs)+'%';
+  document.getElementById('gauge-marker').style.left='calc('+pct(t)+'% - 1.5px)';
+  var status=document.getElementById('gauge-status');
+  if(t<MIN_R){ status.innerHTML='✓ '+brl(MIN_R-t)+' abaixo do piso — ainda há folga no orçamento.'; status.style.color='var(--success)'; }
+  else if(t>MAX_R){ status.innerHTML='⚠ '+brl(t-MAX_R)+' acima do teto de R$ 30.000.'; status.style.color='var(--danger)'; }
+  else{ status.innerHTML='✓ Dentro da faixa planejada.'; status.style.color='var(--success)'; }
+}
+function renderLegend(){
+  document.getElementById('legend').innerHTML = categories.map(function(c){
+    var pct=Math.round(c.value/total()*100);
+    return '<div class="legend-item" data-cat="'+c.id+'"><span class="swatch" style="background:'+c.color+'"></span><span class="name">'+c.icon+' '+c.name+'</span><span class="pct">'+pct+'%</span></div>';
+  }).join('');
+  document.querySelectorAll('.legend-item').forEach(function(el){
+    el.addEventListener('click', function(){ selectedCat=el.dataset.cat; renderDetail(); });
+  });
+}
+function renderDetail(){
+  var box=document.getElementById('detail');
+  if(!selectedCat){ box.innerHTML='Clique em uma fatia do gráfico ou em uma categoria na legenda para ver o detalhe por dia e por pessoa.'; return; }
+  var c=categories.find(function(x){return x.id===selectedCat;});
+  var perDay=c.value/DAYS, perPersonDay=perDay/PESSOAS;
+  box.innerHTML='<strong>'+c.icon+' '+c.name+'</strong> — '+brl(c.value)+' no total · '+brl(perDay)+' por dia · '+brl(perPersonDay)+' por pessoa/dia · '+Math.round(c.value/total()*100)+'% do orçamento';
+}
+function renderDonut(){
+  var ctx=document.getElementById('donut');
+  var data={ labels:categories.map(function(c){return c.name;}), datasets:[{ data:categories.map(function(c){return c.value;}), backgroundColor:categories.map(function(c){return c.color;}), borderColor:'#161B33', borderWidth:3 }] };
+  if(donutChart){ donutChart.data=data; donutChart.update(); return; }
+  donutChart=new Chart(ctx,{ type:'doughnut', data:data, options:{
+    responsive:true, maintainAspectRatio:false, cutout:'64%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#232A52', titleColor:'#F3EEE2', bodyColor:'#F3EEE2', borderColor:'#3A4278', borderWidth:1, callbacks:{ label:function(item){ return item.label+': '+brl(item.raw); } } } },
+    onClick:function(evt, elements){ if(elements.length){ selectedCat=categories[elements[0].index].id; renderDetail(); } }
+  }});
+}
+function renderLegBar(){
+  var ctx=document.getElementById('legbar');
+  var data={ labels:legs.map(function(l){return l.name;}), datasets:[{ data:legs.map(function(l){return l.value;}), backgroundColor:'#E8A33D', borderRadius:5, barThickness:26 }] };
+  if(legChart){ legChart.data=data; legChart.update(); return; }
+  legChart=new Chart(ctx,{ type:'bar', data:data, options:{
+    indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    scales:{ x:{ ticks:{ callback:function(v){return brl(v);}, color:'#8991B8' }, grid:{ color:'#2C3563' } }, y:{ ticks:{ color:'#F3EEE2' }, grid:{ display:false } } },
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#232A52', titleColor:'#F3EEE2', bodyColor:'#F3EEE2', callbacks:{ label:function(item){ return brl(item.raw); } } } }
+  }});
+}
+function renderCatRows(){
+  document.getElementById('cat-rows').innerHTML = categories.map(function(c){
+    return '<div class="row"><span class="icon">'+c.icon+'</span>'+
+      '<span class="name">'+c.name+'<span class="sub">'+c.sub+'</span></span>'+
+      '<span class="pct" id="pct-'+c.id+'"></span>'+
+      '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" data-id="'+c.id+'" value="'+c.value+'"></span>'+
+      '</div>';
+  }).join('');
+  categories.forEach(function(c){ document.getElementById('pct-'+c.id).textContent=Math.round(c.value/total()*100)+'%'; });
+  document.getElementById('cat-total').textContent=brl(total());
+  document.querySelectorAll('#cat-rows input').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      var c=categories.find(function(x){return x.id===inp.dataset.id;});
+      c.value=Math.max(0, Number(inp.value)||0);
+      renderBudget(); renderPainel(); scheduleSave();
+    });
+  });
+}
+function renderLegRows(){
+  document.getElementById('leg-rows').innerHTML = legs.map(function(l){
+    return '<div class="row"><span class="icon">📍</span>'+
+      '<span class="name">'+l.name+'<span class="sub">'+l.days+' dias</span></span>'+
+      '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" data-id="'+l.id+'" value="'+l.value+'"></span>'+
+      '</div>';
+  }).join('');
+  document.getElementById('leg-total').textContent=brl(legTotal());
+  document.querySelectorAll('#leg-rows input').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      var l=legs.find(function(x){return x.id===inp.dataset.id;});
+      l.value=Math.max(0, Number(inp.value)||0);
+      document.getElementById('leg-total').textContent=brl(legTotal());
+      renderLegBar(); scheduleSave();
+    });
+  });
+}
+function renderBudget(){
+  renderCards(); renderGauge(); renderLegend(); renderDetail(); renderDonut(); renderCatRows();
+}
+document.getElementById('reset-cat').addEventListener('click', function(){
+  categories.forEach(function(c){ c.value=c.def; });
+  renderBudget(); renderPainel(); scheduleSave();
+});
+
+// ---------- CHECKLIST ----------
+function renderChecklist(){
+  document.getElementById('check-list').innerHTML = checklistItems.map(function(txt,i){
+    var checked=checklistChecked[i];
+    return '<label class="check-item'+(checked?' done':'')+'" id="ci-'+i+'"><input type="checkbox" onchange="toggleCheck('+i+')" '+(checked?'checked':'')+'><span>'+txt+'</span></label>';
+  }).join('');
+}
+window.toggleCheck=function(i){
+  checklistChecked[i]=!checklistChecked[i];
+  document.getElementById('ci-'+i).classList.toggle('done');
+  scheduleSave();
+};
+
+// ---------- SUPABASE (armazenamento em nuvem) ----------
+var SUPABASE_URL = 'https://alrpnvctcooernsdddax.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_kszH2B5zQuSOHUZTxSTNHw_Vit34hNT';
+var TRIP_ID = 'europa-2026';
+var sb = (SUPABASE_URL.indexOf('COLE_AQUI')===-1 && window.supabase) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+var saveTimer=null;
+
+function setSaveStatus(txt,color){
+  var el=document.getElementById('save-status');
+  if(el){ el.textContent=txt; el.style.color=color||'var(--muted)'; }
+}
+
+function scheduleSave(){
+  if(!sb){ setSaveStatus('Configure o Supabase para salvar (veja instruções)','var(--danger)'); return; }
+  setSaveStatus('Salvando…','var(--muted)');
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveNow,900);
+}
+
+function saveNow(){
+  var payload={
+    categories:categories.map(function(c){return {id:c.id,value:c.value};}),
+    legs:legs.map(function(l){return {id:l.id,value:l.value};}),
+    startdate:document.getElementById('startdate').value,
+    checklistChecked:checklistChecked
+  };
+  sb.schema('viagem').from('trip_state').upsert({id:TRIP_ID,payload:payload,updated_at:new Date().toISOString()}).then(function(res){
+    if(res.error){ setSaveStatus('Erro ao salvar','var(--danger)'); console.error(res.error); }
+    else{ setSaveStatus('Salvo ✓','var(--success)'); }
+  });
+}
+
+function loadState(){
+  if(!sb){ setSaveStatus('Supabase não configurado — veja instruções abaixo','var(--danger)'); return Promise.resolve(); }
+  setSaveStatus('Carregando…','var(--muted)');
+  return sb.schema('viagem').from('trip_state').select('payload').eq('id',TRIP_ID).single().then(function(res){
+    if(res.error || !res.data){ setSaveStatus('Nenhum dado salvo ainda — primeira edição vai criar','var(--muted)'); return; }
+    var p=res.data.payload;
+    if(p.categories){ p.categories.forEach(function(pc){ var c=categories.find(function(x){return x.id===pc.id;}); if(c) c.value=pc.value; }); }
+    if(p.legs){ p.legs.forEach(function(pl){ var l=legs.find(function(x){return x.id===pl.id;}); if(l) l.value=pl.value; }); }
+    if(p.startdate){ document.getElementById('startdate').value=p.startdate; }
+    if(p.checklistChecked){ checklistChecked=p.checklistChecked; }
+    setSaveStatus('Salvo ✓','var(--success)');
+  });
+}
+
+// ---------- INIT ----------
+function init(){
+  renderPainel();
+  renderItinerary();
+  initMap();
+  renderBudget();
+  renderLegRows();
+  renderLegBar();
+  renderChecklist();
+  loadState().then(function(){
+    renderPainel();
+    renderItinerary();
+    renderBudget();
+    renderLegRows();
+    renderLegBar();
+    renderChecklist();
+  });
+}
+init();
+</script>
+</body>
+</html>
