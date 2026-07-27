@@ -38,9 +38,10 @@
   .card .value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;margin:0;color:var(--amber);}
   .card.status .value{font-size:14px;font-family:'Inter';color:var(--cream);}
   .gauge-label{font-size:12px;color:var(--muted);margin:0 0 8px;}
-  .gauge-track{position:relative;height:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;}
-  .gauge-zone{position:absolute;top:0;height:100%;background:rgba(90,168,138,0.35);border-radius:6px;}
-  .gauge-marker{position:absolute;top:-5px;width:3px;height:20px;background:var(--amber);border-radius:2px;box-shadow:0 0 6px var(--amber);}
+  .gauge-track{position:relative;height:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:7px;margin-bottom:2px;overflow:visible;}
+  .gauge-fill{position:absolute;top:0;left:0;height:100%;border-radius:7px;background:var(--amber);transition:width .2s;z-index:1;}
+  .gauge-zone{position:absolute;top:-3px;height:20px;border-left:2px dashed var(--success);border-right:2px dashed var(--success);z-index:2;pointer-events:none;}
+  .gauge-tag{position:absolute;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--success);white-space:nowrap;top:0;}
   .gauge-scale{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:6px;}
   #gauge-status{font-size:13px;margin:0 0 2rem;}
   .chart-row{display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1.5rem;}
@@ -167,8 +168,30 @@
 
   <!-- MAPA -->
   <div class="panel" id="panel-mapa">
-    <p class="hint" style="margin-bottom:1rem;">Clique em um marcador para ver os dias daquele trecho e pular direto para o roteiro.</p>
+    <p class="hint" style="margin-bottom:1rem;">Clique em um marcador de cidade para ver os dias daquele trecho no roteiro. Ative sua localização para saber o que está mais perto de você.</p>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1rem;">
+      <button type="button" class="reset" id="btn-geoloc">📍 Ativar minha localização</button>
+      <span class="hint" id="geoloc-status"></span>
+    </div>
+    <div id="poi-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;"></div>
     <div id="map"></div>
+    <div id="nearby-panel" style="margin-top:1.25rem;"></div>
+
+    <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Cadastrar ponto no mapa</h2>
+    <p class="hint" style="margin-bottom:.75rem;">Digite o nome do local (ex: "Torre Eiffel", "Hotel Ibis Bastille Paris", "Embaixada do Brasil em Paris") — o sistema localiza automaticamente no mapa.</p>
+    <div class="add-row" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="new-poi-name" placeholder="Nome do ponto" style="flex:1;min-width:160px;">
+        <select id="new-poi-type" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;"></select>
+        <select id="new-poi-leg" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;"></select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="new-poi-address" placeholder="Nome/endereço para buscar no mapa (opcional se já preencheu o nome)" style="flex:1;min-width:160px;">
+        <button type="button" id="add-poi">+ Buscar e adicionar</button>
+      </div>
+      <p class="hint" id="poi-add-status"></p>
+    </div>
+    <div id="poi-list" style="margin-top:1rem;"></div>
   </div>
 
   <!-- ORÇAMENTO -->
@@ -182,15 +205,19 @@
 
     <div class="subpanel active" id="sub-geral">
       <div class="cards" id="cards"></div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-        <span class="gauge-label" style="margin:0;">Meta: R$</span>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <span class="gauge-label" style="margin:0;">Meta: piso R$</span>
         <input type="number" id="goal-min" step="500" min="0" style="width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:6px 8px;">
-        <span class="hint">até R$</span>
+        <span class="hint">teto R$</span>
         <input type="number" id="goal-max" step="500" min="0" style="width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:6px 8px;">
       </div>
-      <div class="gauge-track"><div class="gauge-zone" id="gauge-zone"></div><div class="gauge-marker" id="gauge-marker"></div></div>
-      <div class="gauge-scale"><span id="scale-lo"></span><span id="scale-hi"></span></div>
-      <p id="gauge-status"></p>
+      <div class="gauge-track" id="gauge-track">
+        <div class="gauge-zone" id="gauge-zone"></div>
+        <div class="gauge-fill" id="gauge-fill"></div>
+      </div>
+      <div style="position:relative;height:16px;margin-bottom:2px;" id="gauge-zone-labels"></div>
+      <div class="gauge-scale"><span id="scale-lo">R$ 0</span><span id="scale-hi"></span></div>
+      <p id="gauge-status" style="margin-top:10px;"></p>
       <div class="chart-row">
         <div class="chart-box"><canvas id="donut"></canvas></div>
         <div class="legend" id="legend"></div>
@@ -472,6 +499,17 @@ function renderItinerary(){
 }
 
 // ---------- MAPA ----------
+var pois=[];
+var typeMeta={
+  atracao:{label:'Atração turística',icon:'🎯',color:'#5B7FBD'},
+  hospedagem:{label:'Hospedagem',icon:'🛏️',color:'#4A9B8E'},
+  hospital:{label:'Hospital',icon:'🏥',color:'#C1594A'},
+  embaixada:{label:'Embaixada/Consulado',icon:'🛂',color:'#E8A33D'}
+};
+var activeFilters={atracao:true,hospedagem:true,hospital:true,embaixada:true};
+var poiLayers={};
+var userPos=null, userMarker=null, geoWatchId=null;
+
 function initMap(){
   map=L.map('map',{scrollWheelZoom:false}).setView([46.5,7.5],5);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(map);
@@ -487,11 +525,143 @@ function initMap(){
   });
   L.polyline(pts,{color:'#8991B8',weight:2,dashArray:'4 6'}).addTo(map);
   map.fitBounds(pts,{padding:[30,30]});
+  Object.keys(typeMeta).forEach(function(t){ poiLayers[t]=L.layerGroup().addTo(map); });
+  renderPoiFormOptions();
+  renderPoiFilters();
+  renderPoiMarkers();
+  renderPoiList();
+  renderNearby();
 }
 window.jumpToLeg=function(lid){
   document.querySelector('.tab[data-tab="roteiro"]').click();
   setTimeout(function(){ var el=document.getElementById('leg-'+lid); if(el) el.scrollIntoView({behavior:'smooth'}); },80);
 };
+
+function distKm(a,b){
+  var R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
+  var lat1=a.lat*Math.PI/180, lat2=b.lat*Math.PI/180;
+  var h=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.sin(dLng/2)*Math.sin(dLng/2)*Math.cos(lat1)*Math.cos(lat2);
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+
+function toggleGeoloc(){
+  var btn=document.getElementById('btn-geoloc');
+  var status=document.getElementById('geoloc-status');
+  if(geoWatchId){
+    navigator.geolocation.clearWatch(geoWatchId); geoWatchId=null; userPos=null;
+    if(userMarker){ map.removeLayer(userMarker); userMarker=null; }
+    status.textContent='Localização desativada.';
+    btn.textContent='📍 Ativar minha localização';
+    renderNearby();
+    return;
+  }
+  if(!navigator.geolocation){ status.textContent='Geolocalização não é suportada neste navegador.'; return; }
+  status.textContent='Solicitando permissão…';
+  geoWatchId=navigator.geolocation.watchPosition(function(pos){
+    userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    if(!userMarker){
+      userMarker=L.circleMarker([userPos.lat,userPos.lng],{radius:9,color:'#fff',fillColor:'#2a78d6',fillOpacity:1,weight:2}).addTo(map).bindPopup('Você está aqui');
+    } else { userMarker.setLatLng([userPos.lat,userPos.lng]); }
+    status.textContent='Localização ativa — atualizando ao vivo.';
+    btn.textContent='📍 Desativar minha localização';
+    renderNearby();
+  }, function(err){
+    status.textContent='Não foi possível obter sua localização: '+err.message;
+  }, {enableHighAccuracy:true, maximumAge:10000});
+}
+document.getElementById('btn-geoloc').addEventListener('click', toggleGeoloc);
+
+function renderNearby(){
+  var panel=document.getElementById('nearby-panel');
+  if(!userPos){ panel.innerHTML='<p class="hint">Ative sua localização acima para ver aqui os pontos cadastrados mais próximos de você, com distância.</p>'; return; }
+  if(!pois.length){ panel.innerHTML='<p class="hint">Nenhum ponto cadastrado ainda — adicione atrações, hospedagens, hospitais ou embaixadas abaixo.</p>'; return; }
+  var sorted=pois.map(function(p){ return {p:p, d:distKm(userPos,p)}; }).sort(function(a,b){return a.d-b.d;}).slice(0,6);
+  panel.innerHTML='<h2 class="section" style="font-size:14px;margin-bottom:8px;">Mais próximos de você agora</h2>'+sorted.map(function(s){
+    var tm=typeMeta[s.p.type];
+    var distText = s.d<1 ? Math.round(s.d*1000)+' m' : s.d.toFixed(1)+' km';
+    return '<div class="row" style="cursor:pointer;" data-poi="'+s.p.id+'"><span class="icon">'+tm.icon+'</span><span class="name">'+esc(s.p.name)+'<span class="sub">'+tm.label+(s.p.legId&&legMeta[s.p.legId]?' · '+legMeta[s.p.legId].name:'')+'</span></span><span style="font-family:\'IBM Plex Mono\',monospace;color:var(--amber);font-size:13px;">'+distText+'</span></div>';
+  }).join('');
+  document.querySelectorAll('#nearby-panel .row').forEach(function(el){
+    el.addEventListener('click', function(){
+      var p=pois.find(function(x){return x.id===el.dataset.poi;});
+      if(p && map){ map.setView([p.lat,p.lng],15); document.querySelector('.tab[data-tab="mapa"]').click(); }
+    });
+  });
+}
+
+function geocode(query){
+  return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(query))
+    .then(function(r){ return r.json(); })
+    .then(function(arr){ return (arr && arr.length) ? {lat:Number(arr[0].lat), lng:Number(arr[0].lon)} : null; });
+}
+
+function renderPoiFormOptions(){
+  document.getElementById('new-poi-type').innerHTML=Object.keys(typeMeta).map(function(t){ return '<option value="'+t+'">'+typeMeta[t].icon+' '+typeMeta[t].label+'</option>'; }).join('');
+  document.getElementById('new-poi-leg').innerHTML=legSelectOptions('');
+}
+
+function renderPoiFilters(){
+  document.getElementById('poi-filters').innerHTML=Object.keys(typeMeta).map(function(t){
+    var tm=typeMeta[t]; var on=activeFilters[t];
+    return '<button type="button" class="poi-filter-btn" data-type="'+t+'" style="font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid '+tm.color+';background:'+(on?tm.color:'transparent')+';color:'+(on?'#161B33':tm.color)+';cursor:pointer;font-family:Inter;">'+tm.icon+' '+tm.label+'</button>';
+  }).join('');
+  document.querySelectorAll('.poi-filter-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      activeFilters[btn.dataset.type]=!activeFilters[btn.dataset.type];
+      renderPoiFilters();
+      renderPoiMarkers();
+    });
+  });
+}
+
+function renderPoiMarkers(){
+  Object.keys(poiLayers).forEach(function(t){ poiLayers[t].clearLayers(); });
+  pois.forEach(function(p){
+    var tm=typeMeta[p.type];
+    if(!tm) return;
+    var marker=L.circleMarker([p.lat,p.lng],{radius:7,color:tm.color,fillColor:tm.color,fillOpacity:0.85,weight:2});
+    marker.bindPopup('<p class="popup-title">'+tm.icon+' '+esc(p.name)+'</p><p style="font-size:12px;margin:0;">'+tm.label+(p.legId&&legMeta[p.legId]?' · '+legMeta[p.legId].name:'')+'</p>');
+    marker.addTo(poiLayers[p.type]);
+  });
+  Object.keys(poiLayers).forEach(function(t){
+    if(activeFilters[t]){ if(!map.hasLayer(poiLayers[t])) poiLayers[t].addTo(map); }
+    else { if(map.hasLayer(poiLayers[t])) map.removeLayer(poiLayers[t]); }
+  });
+}
+
+function renderPoiList(){
+  document.getElementById('poi-list').innerHTML = pois.map(function(p){
+    var tm=typeMeta[p.type];
+    return '<div class="row"><span class="icon">'+tm.icon+'</span><span class="name">'+esc(p.name)+'<span class="sub">'+tm.label+(p.legId&&legMeta[p.legId]?' · '+legMeta[p.legId].name:'')+'</span></span>'+
+      '<span class="row-actions"><button type="button" class="iconbtn danger poi-del" data-id="'+p.id+'" title="Excluir">🗑</button></span></div>';
+  }).join('');
+  document.querySelectorAll('.poi-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(!confirm('Excluir este ponto do mapa?')) return;
+      pois=pois.filter(function(x){return x.id!==btn.dataset.id;});
+      renderPoiMarkers(); renderPoiList(); renderNearby(); scheduleSave();
+    });
+  });
+}
+
+document.getElementById('add-poi').addEventListener('click', function(){
+  var nameInp=document.getElementById('new-poi-name');
+  var typeSel=document.getElementById('new-poi-type');
+  var legSel=document.getElementById('new-poi-leg');
+  var addrInp=document.getElementById('new-poi-address');
+  var statusEl=document.getElementById('poi-add-status');
+  var name=nameInp.value.trim();
+  var query=(addrInp.value.trim() || name);
+  if(!name || !query){ statusEl.textContent='Preencha ao menos o nome do ponto.'; statusEl.style.color='var(--danger)'; return; }
+  statusEl.textContent='Localizando no mapa…'; statusEl.style.color='var(--muted)';
+  geocode(query).then(function(loc){
+    if(!loc){ statusEl.textContent='Não encontrei esse local — tente um nome ou endereço mais específico.'; statusEl.style.color='var(--danger)'; return; }
+    pois.push({id:'poi_'+Date.now(), name:name, type:typeSel.value, legId:legSel.value, lat:loc.lat, lng:loc.lng});
+    nameInp.value=''; addrInp.value='';
+    statusEl.textContent='Adicionado ✓'; statusEl.style.color='var(--success)';
+    renderPoiMarkers(); renderPoiList(); renderNearby(); scheduleSave();
+  }).catch(function(){ statusEl.textContent='Erro ao buscar localização — tente novamente em alguns segundos.'; statusEl.style.color='var(--danger)'; });
+});
 
 // ---------- ORÇAMENTO ----------
 function renderCards(){
@@ -503,18 +673,22 @@ function renderCards(){
 }
 function renderGauge(){
   var t=total();
-  var lo=Math.max(0,MIN_R-8000), hi=MAX_R+8000;
-  function pct(v){ return Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100)); }
+  var hi=Math.ceil(Math.max(MAX_R*1.15, t*1.1, MAX_R+5000)/5000)*5000;
+  function pct(v){ return Math.max(0,Math.min(100,(v/hi)*100)); }
+  document.getElementById('gauge-fill').style.width=pct(t)+'%';
+  var fillColor = (t>=MIN_R && t<=MAX_R) ? 'var(--success)' : (t>MAX_R ? 'var(--danger)' : 'var(--amber)');
+  document.getElementById('gauge-fill').style.background=fillColor;
   var zs=pct(MIN_R), ze=pct(MAX_R);
   var zone=document.getElementById('gauge-zone');
-  zone.style.left=zs+'%'; zone.style.width=(ze-zs)+'%';
-  document.getElementById('gauge-marker').style.left='calc('+pct(t)+'% - 1.5px)';
-  document.getElementById('scale-lo').textContent='R$ '+Math.round(lo/1000)+'k';
+  zone.style.left=zs+'%'; zone.style.width=Math.max(0.4,(ze-zs))+'%';
   document.getElementById('scale-hi').textContent='R$ '+Math.round(hi/1000)+'k';
+  document.getElementById('gauge-zone-labels').innerHTML=
+    '<span class="gauge-tag" style="left:'+zs+'%;">↳ Piso '+brl(MIN_R)+'</span>'+
+    '<span class="gauge-tag" style="left:'+ze+'%;">↳ Teto '+brl(MAX_R)+'</span>';
   var status=document.getElementById('gauge-status');
-  if(t<MIN_R){ status.innerHTML='✓ '+brl(MIN_R-t)+' abaixo do piso — ainda há folga no orçamento.'; status.style.color='var(--success)'; }
-  else if(t>MAX_R){ status.innerHTML='⚠ '+brl(t-MAX_R)+' acima do teto de '+brl(MAX_R)+'.'; status.style.color='var(--danger)'; }
-  else{ status.innerHTML='✓ Dentro da faixa planejada.'; status.style.color='var(--success)'; }
+  if(t<MIN_R){ status.innerHTML='Total atual: <strong style="color:var(--cream)">'+brl(t)+'</strong> — ✓ '+brl(MIN_R-t)+' abaixo do piso, ainda há folga.'; status.style.color='var(--success)'; }
+  else if(t>MAX_R){ status.innerHTML='Total atual: <strong style="color:var(--cream)">'+brl(t)+'</strong> — ⚠ '+brl(t-MAX_R)+' acima do teto.'; status.style.color='var(--danger)'; }
+  else{ status.innerHTML='Total atual: <strong style="color:var(--cream)">'+brl(t)+'</strong> — ✓ dentro da faixa planejada.'; status.style.color='var(--success)'; }
 }
 document.getElementById('goal-min').addEventListener('input', function(){
   MIN_R=Math.max(0, Number(this.value)||0);
@@ -796,7 +970,8 @@ function saveNow(){
     itinerary:itinerary,
     expenses:expenses,
     goalMin:MIN_R,
-    goalMax:MAX_R
+    goalMax:MAX_R,
+    pois:pois
   };
   sb.schema('viagem').from('trip_state').upsert({id:TRIP_ID,payload:payload,updated_at:new Date().toISOString()}).then(function(res){
     if(res.error){
@@ -820,6 +995,7 @@ function loadState(){
     if(p.expenses){ expenses=p.expenses; }
     if(p.goalMin!=null){ MIN_R=p.goalMin; }
     if(p.goalMax!=null){ MAX_R=p.goalMax; }
+    if(p.pois){ pois=p.pois; }
     setSaveStatus('Salvo ✓','var(--success)');
   });
 }
@@ -855,6 +1031,9 @@ function init(){
     renderLegRows();
     renderLegBar();
     syncGoalInputs();
+    renderPoiMarkers();
+    renderPoiList();
+    renderNearby();
     restoreTabFromHash();
   });
 }
