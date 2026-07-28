@@ -193,6 +193,68 @@
   button.reset,.add-row button,.btn-save,.btn-cancel,#nt-create{border-radius:10px;}
   .gauge-fill{background:var(--amber);}
   ::selection{background:var(--amber);color:#fff;}
+  /* ==================================================================
+     CAMADA DE DESIGN — hero com gradiente, abas em pílula, mais contraste
+     ================================================================== */
+  body{background:
+    radial-gradient(1200px 500px at 15% -10%, rgba(79,70,229,0.06), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(251,146,60,0.05), transparent 55%),
+    var(--bg);
+  }
+  .wrap{max-width:1040px;}
+
+  header{
+    position:relative;
+    overflow:hidden;
+    background:linear-gradient(135deg,#3730A3 0%,#4F46E5 55%,#7C6FF0 100%);
+    border-radius:26px;
+    padding:30px 30px 26px;
+    box-shadow:0 16px 40px -12px rgba(55,48,163,0.45);
+    margin-bottom:2rem;
+  }
+  header::before{content:'';position:absolute;top:-70px;right:-50px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.16),transparent 70%);}
+  header::after{content:'';position:absolute;bottom:-100px;left:20%;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.10),transparent 70%);}
+  header .kicker{color:rgba(255,255,255,0.72);position:relative;z-index:1;}
+  header h1{color:#fff;position:relative;z-index:1;font-size:44px;}
+  header .route{color:rgba(255,255,255,0.88);position:relative;z-index:1;}
+  header .route b{color:#fff;}
+  header #save-status{color:rgba(255,255,255,0.65) !important;position:relative;z-index:1;}
+
+  .backbtn{font-weight:600;}
+
+  .tabs{
+    background:var(--bg-card);
+    border:none;
+    border-radius:16px;
+    padding:6px;
+    display:inline-flex;
+    max-width:100%;
+    box-shadow:0 4px 18px -8px rgba(20,20,43,0.12);
+    top:14px;
+  }
+  .tab{border-radius:11px;padding:10px 18px;font-weight:600;color:var(--muted);}
+  .tab:hover{color:var(--cream);background:var(--bg-card-alt);}
+  .tab.active{background:linear-gradient(135deg,var(--amber),#7C6FF0);color:#fff;box-shadow:0 6px 14px -4px rgba(79,70,229,0.45);}
+
+  h2.section{font-size:20px;position:relative;padding-left:14px;}
+  h2.section::before{content:'';position:absolute;left:0;top:3px;bottom:3px;width:4px;border-radius:4px;background:linear-gradient(var(--amber),#7C6FF0);}
+
+  .card{position:relative;}
+  .card .value{font-size:26px;font-weight:700;letter-spacing:-.01em;}
+  .card.status .value{font-size:15px;font-weight:600;}
+
+  .subtab{border-radius:20px !important;}
+  .subtab.active{box-shadow:0 4px 10px -3px rgba(79,70,229,0.35);}
+
+  .trip-card{box-shadow:0 6px 22px -10px rgba(20,20,43,0.18);}
+  .trip-card:hover{box-shadow:0 12px 30px -10px rgba(79,70,229,0.35);}
+  .new-trip-card{background:var(--bg-card);border:2px dashed var(--border);}
+
+  .day-card.is-today{box-shadow:0 8px 24px -8px rgba(79,70,229,0.35);}
+  #today-card{background:linear-gradient(135deg,rgba(79,70,229,0.06),rgba(124,111,240,0.03));border:1px solid rgba(79,70,229,0.18);}
+
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
 </style>
 </head>
 <body>
@@ -365,11 +427,28 @@
       <div id="leg-rows"></div>
       <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
       <div class="barchart-box"><canvas id="legbar"></canvas></div>
+
+      <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Custo por dia, por cidade</h2>
+      <p class="hint" style="margin-bottom:1rem;">Compara o quanto cada cidade custa por dia — ajuda a decidir onde encurtar ou esticar a estadia.</p>
+      <div class="barchart-box"><canvas id="perdaybar"></canvas></div>
     </div>
 
     <div class="subpanel" id="sub-despesas" style="display:none;">
       <p class="hint" style="margin-bottom:1rem;">Lance cada despesa individual (ex: hotel de cada cidade), atribuindo categoria e trecho.</p>
+
+      <div class="row" style="margin-bottom:1rem;">
+        <span class="icon">💱</span>
+        <span class="name">Câmbio de referência<span class="sub">usado para mostrar o equivalente em euros</span></span>
+        <span class="row-inputwrap"><span class="prefix">R$</span><input type="number" id="fx-rate" step="0.05" min="0.1" value="6.00"></span>
+        <span class="hint" style="white-space:nowrap;">por €</span>
+      </div>
+
       <div id="exp-summary" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;"></div>
+
+      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">🏆 Maiores despesas</h2>
+      <div id="top-expenses" style="margin-bottom:2rem;"></div>
+
+      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Todas as despesas</h2>
       <div id="exp-rows"></div>
       <div class="add-row">
         <input type="text" id="new-exp-desc" placeholder="Descrição (ex: Hotel Paris)">
@@ -379,6 +458,7 @@
         <button id="add-exp">+ Adicionar despesa</button>
       </div>
       <div class="total-line" style="margin-top:1rem;"><span>Total lançado</span><span class="value" id="exp-total"></span></div>
+      <p class="hint" id="exp-total-eur" style="text-align:right;margin-top:4px;"></p>
     </div>
   </div>
 
@@ -555,8 +635,8 @@ document.getElementById('btn-back-home').addEventListener('click', function(){
 
 // ---------- ESTADO DA VIAGEM ATUAL ----------
 var categories=[], legs=[], itinerary=[], expenses=[], pois=[], flights=[], documents=[];
-var MIN_R=0, MAX_R=0, PESSOAS=1;
-var donutChart=null, legChart=null, selectedCat=null, map=null;
+var MIN_R=0, MAX_R=0, PESSOAS=1, FX_RATE=6.00;
+var donutChart=null, legChart=null, perDayChart=null, selectedCat=null, map=null;
 var editingDay=null;
 var typeMeta={
   atracao:{label:'Atração turística',icon:'🎯',color:'#5B7FBD'},
@@ -579,9 +659,11 @@ function blankCategories(){
 }
 function resetTripStateBlank(){
   categories=blankCategories(); legs=[]; itinerary=[]; expenses=[]; pois=[]; flights=[]; documents=[];
-  MIN_R=0; MAX_R=0; PESSOAS=1;
+  MIN_R=0; MAX_R=0; PESSOAS=1; FX_RATE=6.00;
   selectedCat=null; editingDay=null;
 }
+
+function eur(v){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'EUR'}).format((v||0)/(FX_RATE||1)); }
 
 function legById(id){ return legs.find(function(l){return l.id===id;}); }
 function legSelectOptions(selectedId){
@@ -594,7 +676,15 @@ function catValue(c){ var exps=catExpenses(c.id); return exps.length ? exps.redu
 function total(){ return categories.reduce(function(a,c){return a+catValue(c);},0); }
 function legTotal(){ return legs.reduce(function(a,l){return a+l.value;},0); }
 function expTotal(){ return expenses.reduce(function(a,e){return a+e.value;},0); }
-function tripDays(){ return itinerary.length || 1; }
+function tripDays(){
+  var s=document.getElementById('startdate').value, r=document.getElementById('returndate').value;
+  if(s && r){
+    var sd=parseDateInput(s), rd=parseDateInput(r);
+    var diff=Math.round((rd-sd)/86400000)+1;
+    if(diff>0) return diff;
+  }
+  return itinerary.length || 1;
+}
 function getStartDate(){ return parseDateInput(document.getElementById('startdate').value) || todayMidnight(); }
 
 // ---------- SALVAR / CARREGAR VIAGEM ----------
@@ -606,7 +696,7 @@ function saveNow(){
     startdate:document.getElementById('startdate').value,
     returndate:document.getElementById('returndate').value,
     pax:Number(document.getElementById('pax').value)||1,
-    goalMin:MIN_R, goalMax:MAX_R
+    goalMin:MIN_R, goalMax:MAX_R, fxRate:FX_RATE
   };
   sb.schema('viagem').from('trip_state').upsert({id:TRIP_ID,payload:payload,updated_at:new Date().toISOString()}).then(function(res){
     if(res.error){ setSaveStatus('Erro ao salvar — tentando de novo…','var(--danger)'); console.error(res.error); setTimeout(saveNow,2500); }
@@ -637,6 +727,7 @@ function loadTripState(){
     if(p.pax) { PESSOAS=p.pax; document.getElementById('pax').value=p.pax; }
     if(p.goalMin!=null) MIN_R=p.goalMin;
     if(p.goalMax!=null) MAX_R=p.goalMax;
+    if(p.fxRate) FX_RATE=p.fxRate;
     migrateLegs();
     setSaveStatus('Salvo ✓','var(--success)');
   });
@@ -692,13 +783,18 @@ function updateTripRouteText(){
 function syncGoalInputs(){
   document.getElementById('goal-min').value=MIN_R;
   document.getElementById('goal-max').value=MAX_R;
+  document.getElementById('fx-rate').value=FX_RATE;
 }
+document.getElementById('fx-rate').addEventListener('input', function(){
+  FX_RATE=Math.max(0.1, Number(this.value)||6);
+  renderBudget(); scheduleSave();
+});
 document.getElementById('pax').addEventListener('input', function(){
   PESSOAS=Math.max(1, Number(this.value)||1);
   renderPainel(); updateTripRouteText(); scheduleSave();
 });
-document.getElementById('startdate').addEventListener('change', function(){ renderPainel(); renderItinerary(); scheduleSave(); });
-document.getElementById('returndate').addEventListener('change', function(){ renderPainel(); checkDocCleanup(); scheduleSave(); });
+document.getElementById('startdate').addEventListener('change', function(){ renderPainel(); renderItinerary(); renderBudget(); scheduleSave(); });
+document.getElementById('returndate').addEventListener('change', function(){ renderPainel(); renderBudget(); checkDocCleanup(); scheduleSave(); });
 
 // ---------- NAVEGAÇÃO POR ABAS ----------
 document.querySelectorAll('.tab').forEach(function(btn){
@@ -1024,7 +1120,7 @@ document.getElementById('add-poi').addEventListener('click', function(){
 function renderCards(){
   var t=total(), perDay=t/tripDays(), perPersonDay=perDay/PESSOAS;
   document.getElementById('cards').innerHTML =
-    '<div class="card"><p class="label">Total estimado</p><p class="value">'+brl(t)+'</p></div>'+
+    '<div class="card"><p class="label">Total estimado</p><p class="value">'+brl(t)+'</p><p class="hint" style="margin:4px 0 0;">≈ '+eur(t)+'</p></div>'+
     '<div class="card"><p class="label">Por dia</p><p class="value">'+brl(perDay)+'</p></div>'+
     '<div class="card"><p class="label">Por pessoa / dia</p><p class="value">'+brl(perPersonDay)+'</p></div>';
 }
@@ -1110,11 +1206,16 @@ document.getElementById('reset-cat').addEventListener('click', function(){
 });
 
 var editingLegName=null;
+function legPerDayText(l){
+  var spend=expenses.filter(function(e){return e.legId===l.id;}).reduce(function(a,e){return a+e.value;},0);
+  var base=spend||l.value;
+  return brl(base/(l.days||1))+'/dia';
+}
 function renderLegRows(){
   document.getElementById('leg-rows').innerHTML = legs.map(function(l){
     var nameHtml = editingLegName===l.id
       ? '<input type="text" class="leg-name-edit" data-id="'+l.id+'" value="'+esc(l.name)+'" style="flex:1;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:14px;padding:6px 8px;">'
-      : '<span class="name">'+esc(l.name)+'<span class="sub">'+l.days+' dias'+(l.lat==null?' · sem localização no mapa':'')+'</span></span>';
+      : '<span class="name">'+esc(l.name)+'<span class="sub">'+l.days+' dias · '+legPerDayText(l)+(l.lat==null?' · sem localização no mapa':'')+'</span></span>';
     return '<div class="row leg-row" draggable="true" data-id="'+l.id+'">'+
       '<span class="iconbtn drag-handle" title="Arrastar para reordenar" style="cursor:grab;">⠿</span>'+
       '<span class="icon" style="color:'+l.color+'">📍</span>'+
@@ -1246,9 +1347,37 @@ document.getElementById('add-exp').addEventListener('click', function(){
   expenses.push({id:'exp_'+Date.now(),categoryId:catSel.value,legId:legSel.value,desc:desc,value:value});
   descInp.value=''; valInp.value=''; renderBudget(); renderPainel(); scheduleSave();
 });
+function renderTopExpenses(){
+  var box=document.getElementById('top-expenses');
+  if(!expenses.length){ box.innerHTML='<p class="hint">Nenhuma despesa lançada ainda.</p>'; return; }
+  var top=expenses.slice().sort(function(a,b){return b.value-a.value;}).slice(0,8);
+  box.innerHTML=top.map(function(e,i){
+    var cat=categories.find(function(c){return c.id===e.categoryId;});
+    var lg=legById(e.legId);
+    return '<div class="row"><span class="icon">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1))+'</span>'+
+      '<span class="name">'+esc(e.desc||'—')+'<span class="sub">'+(cat?cat.icon+' '+esc(cat.name):'')+(lg?' · '+esc(lg.name):'')+'</span></span>'+
+      '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--amber);font-weight:700;font-size:15px;">'+brl(e.value)+'</span></div>';
+  }).join('');
+}
+function renderPerDayChart(){
+  var ctx=document.getElementById('perdaybar');
+  if(!ctx) return;
+  var data={
+    labels:legs.map(function(l){return l.name;}),
+    datasets:[{ data:legs.map(function(l){ var spend=expenses.filter(function(e){return e.legId===l.id;}).reduce(function(a,e){return a+e.value;},0); var base=spend||l.value; return base/(l.days||1); }),
+      backgroundColor:legs.map(function(l){return l.color;}), borderRadius:5, barThickness:22 }]
+  };
+  if(perDayChart){ perDayChart.data=data; perDayChart.update(); return; }
+  perDayChart=new Chart(ctx,{ type:'bar', data:data, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    scales:{ x:{ ticks:{ callback:function(v){return brl(v);}, color:'#8B8FA3' }, grid:{ color:'#E3E5F5' } }, y:{ ticks:{ color:'#2B2D42' }, grid:{ display:false } } },
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#FFFFFF', titleColor:'#2B2D42', bodyColor:'#2B2D42', borderColor:'#E3E5F5', borderWidth:1, callbacks:{ label:function(item){ return brl(item.raw)+' / dia'; } } } } }});
+}
 function renderBudget(){
   renderCards(); renderGauge(); renderLegend(); renderDetail(); renderDonut(); renderCatRows();
   renderExpenseCatOptions(); renderExpenseRows(); renderExpenseSummary(); renderSpendMap();
+  renderTopExpenses(); renderPerDayChart();
+  var expEurEl=document.getElementById('exp-total-eur');
+  if(expEurEl) expEurEl.textContent='≈ '+eur(expTotal())+' pelo câmbio de referência';
 }
 
 // ---------- DOCUMENTOS: VOOS / CARTÃO DE EMBARQUE ----------
