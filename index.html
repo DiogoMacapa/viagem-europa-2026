@@ -18,18 +18,20 @@
     --bg:#F7F7FC; --bg-card:#FFFFFF; --bg-card-alt:#F0F0FA;
     --amber:#7C5CFC; --wine:#E0428F; --teal:#14B8A6; --blue:#7C5CFC; --violet:#E0428F;
     --cream:#15162B; --muted:#75798F; --border:#E6E6F5; --success:#14B8A6; --danger:#E0355A;
+    --numgreen:#16A34A;
   }
   [data-theme="dark"]{
     --bg:#0A0B16; --bg-card:#14162A; --bg-card-alt:#1B1E38;
     --amber:#8B5CF6; --wine:#EC4899; --teal:#2DD4BF; --blue:#8B5CF6; --violet:#EC4899;
-    --cream:#E8E9F5; --muted:#8890B5; --border:#2A2D4A; --success:#2DD4BF; --danger:#F0466B;
+    --cream:#F3F4FC; --muted:#ABB2E0; --border:#333761; --success:#2DD4BF; --danger:#F0466B;
+    --numgreen:#39FF88;
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--cream);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
   .wrap{max-width:1000px;margin:0 auto;padding:2.5rem 1.5rem 4rem;}
   header{margin-bottom:1.75rem;}
   .kicker{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin:0 0 6px;}
-  h1{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:42px;letter-spacing:.02em;margin:0 0 10px;line-height:1;}
+  h1{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:42px;letter-spacing:.02em;margin:0 0 10px;line-height:1.3;}
   .route{display:flex;flex-wrap:wrap;gap:6px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);}
   .route b{color:var(--cream);font-weight:500;}
   .tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:1.75rem;overflow-x:auto;position:sticky;top:0;background:var(--bg);z-index:20;padding-top:4px;}
@@ -43,7 +45,7 @@
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:1.75rem;}
   .card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;}
   .card .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;}
-  .card .value{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;margin:0;color:var(--amber);}
+  .card .value{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:22px;font-weight:500;margin:0;color:var(--numgreen);}
   .card.status .value{font-size:14px;font-family:'Inter';color:var(--cream);}
   .gauge-label{font-size:12px;color:var(--muted);margin:0 0 8px;}
   .gauge-track{position:relative;height:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:7px;margin-bottom:2px;overflow:visible;}
@@ -72,7 +74,7 @@
   .row-inputwrap{display:flex;align-items:center;gap:4px;}
   .prefix{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;}
   .total-line{display:flex;justify-content:space-between;border-top:1px solid var(--border);margin-top:14px;padding-top:14px;font-size:16px;}
-  .total-line .value{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--amber);font-weight:500;}
+  .total-line .value{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:500;}
   .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px;}
   .hint{font-size:13px;color:var(--muted);}
   button.reset{background:none;border:1px solid var(--border);color:var(--cream);border-radius:6px;padding:8px 14px;font-size:12px;font-family:'Inter';cursor:pointer;}
@@ -238,7 +240,7 @@
   header::after{content:'';position:absolute;bottom:-110px;left:15%;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(20,184,166,0.22),transparent 70%);filter:blur(4px);}
   header .kicker{color:var(--amber);position:relative;z-index:1;letter-spacing:.16em;}
   header h1{
-    position:relative;z-index:1;font-size:44px;
+    position:relative;z-index:1;font-size:44px;line-height:1.3;padding:0.08em 0.02em;margin:0 0 6px;display:inline-block;
     background:linear-gradient(90deg,var(--teal) 0%,var(--amber) 55%,var(--wine) 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
   }
@@ -864,6 +866,7 @@ function loadTripState(){
     applyPayload(res.data.payload);
     saveSnapshotLocal(res.data.payload);
     migrateLegs();
+    syncTripIndexReturnDate();
     setSaveStatus('Salvo ✓','var(--success)');
   }).catch(function(){
     var snap1=loadSnapshotLocal();
@@ -871,6 +874,11 @@ function loadTripState(){
     setOfflineBanner(true);
     setSaveStatus(snap1?'Offline — dados salvos neste aparelho':'Sem conexão e sem dados salvos aqui','var(--danger)');
   });
+}
+function syncTripIndexReturnDate(){
+  var rd=document.getElementById('returndate').value;
+  var idxEntry=trips.find(function(t){return t.id===TRIP_ID;});
+  if(idxEntry && idxEntry.returnDate!==rd){ idxEntry.returnDate=rd; if(currentTrip) currentTrip.returnDate=rd; saveTripsIndex(); }
 }
 function migrateLegs(){
   var needsGeocode=[];
@@ -934,7 +942,14 @@ document.getElementById('pax').addEventListener('input', function(){
   renderPainel(); updateTripRouteText(); scheduleSave();
 });
 document.getElementById('startdate').addEventListener('change', function(){ renderPainel(); renderItinerary(); renderBudget(); scheduleSave(); });
-document.getElementById('returndate').addEventListener('change', function(){ renderPainel(); renderBudget(); checkDocCleanup(); scheduleSave(); });
+document.getElementById('returndate').addEventListener('change', function(){
+  renderPainel(); renderBudget(); checkDocCleanup(); scheduleSave();
+  if(currentTrip){
+    currentTrip.returnDate=this.value;
+    var idxEntry=trips.find(function(t){return t.id===TRIP_ID;});
+    if(idxEntry){ idxEntry.returnDate=this.value; saveTripsIndex(); }
+  }
+});
 
 // ---------- NAVEGAÇÃO POR ABAS ----------
 document.querySelectorAll('.tab').forEach(function(btn){
@@ -1298,7 +1313,7 @@ function sparklineSvg(){
   var max=Math.max.apply(null,pts)||1;
   var w=100,h=26,stepX=w/(pts.length-1);
   var poly=pts.map(function(v,i){ var x=i*stepX; var y=h-(v/max)*h; return x.toFixed(1)+','+Math.max(1,y).toFixed(1); }).join(' ');
-  return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="26" preserveAspectRatio="none" style="margin-top:8px;display:block;"><polyline points="'+poly+'" fill="none" stroke="var(--amber)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="26" preserveAspectRatio="none" style="margin-top:8px;display:block;"><polyline points="'+poly+'" fill="none" stroke="var(--numgreen)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 function renderCards(){
   var t=total(), perDay=t/tripDays(), perPersonDay=perDay/PESSOAS;
@@ -1537,7 +1552,7 @@ function renderPersonSplit(){
   var names=Object.keys(byPerson).sort(function(a,b){return byPerson[b]-byPerson[a];});
   box.innerHTML=names.map(function(n){
     return '<div class="row">'+avatarHtml(n)+'<span class="name">'+esc(n)+'</span>'+
-      '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--amber);font-weight:700;font-size:15px;">'+brl(byPerson[n])+'</span></div>';
+      '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;font-size:15px;">'+brl(byPerson[n])+'</span></div>';
   }).join('');
 }
 document.getElementById('add-exp').addEventListener('click', function(){
@@ -1556,7 +1571,7 @@ function renderTopExpenses(){
     var lg=legById(e.legId);
     return '<div class="row"><span class="icon">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1))+'</span>'+avatarHtml(e.person)+
       '<span class="name">'+esc(e.desc||'—')+'<span class="sub">'+(cat?cat.icon+' '+esc(cat.name):'')+(lg?' · '+esc(lg.name):'')+'</span></span>'+
-      '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--amber);font-weight:700;font-size:15px;">'+brl(e.value)+'</span></div>';
+      '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;font-size:15px;">'+brl(e.value)+'</span></div>';
   }).join('');
 }
 function renderPerDayChart(){
