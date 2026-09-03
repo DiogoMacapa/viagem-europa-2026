@@ -77,7 +77,17 @@
   .total-line .value{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:500;}
   .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px;}
   .hint{font-size:13px;color:var(--muted);}
-  button.reset{background:none;border:1px solid var(--border);color:var(--cream);border-radius:6px;padding:8px 14px;font-size:12px;font-family:'Inter';cursor:pointer;}
+  button.reset{background:var(--bg-card);border:1px solid var(--border);color:var(--cream);border-radius:10px;padding:9px 16px;font-size:12px;font-weight:600;font-family:'Inter';cursor:pointer;transition:transform .12s,box-shadow .12s,border-color .12s;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
+  button.reset:hover{border-color:var(--amber);transform:translateY(-1px);box-shadow:0 4px 12px rgba(139,92,246,0.18);}
+  button.reset:active{transform:translateY(0);}
+  .add-row button, #nt-create, .primary-btn{
+    background:linear-gradient(135deg,var(--amber),var(--wine)) !important;
+    border:none !important;color:#fff !important;font-weight:700 !important;
+    box-shadow:0 4px 14px -2px rgba(139,92,246,0.45);
+    transition:transform .12s,box-shadow .12s;
+  }
+  .add-row button:hover, #nt-create:hover, .primary-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px -2px rgba(139,92,246,0.55);}
+  .add-row button:active, #nt-create:active, .primary-btn:active{transform:translateY(0);}
   button.reset:hover{border-color:var(--amber);color:var(--amber);}
   .barchart-box{position:relative;width:100%;height:260px;}
   footer{margin-top:2.5rem;font-size:12px;color:var(--muted);text-align:center;}
@@ -263,6 +273,8 @@
   .tab{border-radius:11px;padding:10px 18px;font-weight:600;color:var(--muted);}
   .tab:hover{color:var(--cream);background:var(--bg-card-alt);}
   .tab.active{background:linear-gradient(135deg,var(--amber),#7C6FF0);color:#fff;box-shadow:0 6px 14px -4px rgba(79,70,229,0.45);}
+  #tab-emergencia{color:var(--danger);}
+  #tab-emergencia.active{background:var(--danger) !important;color:#fff !important;box-shadow:0 6px 14px -4px rgba(240,70,107,0.5) !important;}
 
   h2.section{font-size:20px;position:relative;padding-left:14px;}
   h2.section::before{content:'';position:absolute;left:0;top:3px;bottom:3px;width:4px;border-radius:4px;background:linear-gradient(var(--amber),#7C6FF0);}
@@ -294,6 +306,18 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;
   }
   #theme-toggle:hover{border-color:var(--amber);}
+
+  @media print{
+    #theme-toggle,.tabs,.backbtn,.day-head-actions,#print-roteiro,#save-status,#offline-banner,.subtab,header .kicker{display:none !important;}
+    #view-home,#view-global{display:none !important;}
+    #view-trip{display:block !important;}
+    .panel{display:none !important;}
+    #panel-roteiro{display:block !important;}
+    body{background:#fff;color:#000;}
+    .day-card,.leg-group{box-shadow:none !important;border:1px solid #ccc;break-inside:avoid;}
+    header{box-shadow:none;background:#fff;border:1px solid #ccc;}
+    header h1{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
 </style>
 </head>
 <body>
@@ -311,6 +335,8 @@
 
     <div class="home-grid" id="home-grid"></div>
 
+    <button type="button" id="btn-global" class="reset" style="margin-bottom:1.5rem;">📊 Orçamento geral de todas as viagens</button>
+
     <div class="new-trip-form" id="new-trip-form">
       <h2 class="section" style="font-size:18px;">Nova viagem</h2>
       <div class="fields">
@@ -326,6 +352,17 @@
     </div>
 
     <footer>Sistema vivo — cada viagem guarda seus próprios dados, separados.</footer>
+  </div>
+
+  <!-- ===================== ORÇAMENTO GERAL (TODAS AS VIAGENS) ===================== -->
+  <div id="view-global" style="display:none;">
+    <button type="button" class="backbtn" id="btn-back-home2">← Minhas Viagens</button>
+    <header>
+      <p class="kicker">Centro de viagem</p>
+      <h1>Orçamento Geral</h1>
+      <div class="route">Somando todas as suas viagens cadastradas</div>
+    </header>
+    <div id="global-content"><p class="hint">Carregando…</p></div>
   </div>
 
   <!-- ===================== VIEW DA VIAGEM ===================== -->
@@ -345,6 +382,7 @@
     <button class="tab" data-tab="mapa">Mapa</button>
     <button class="tab" data-tab="orcamento">Orçamento</button>
     <button class="tab" data-tab="documentos">Documentos</button>
+    <button class="tab" data-tab="emergencia" id="tab-emergencia" style="font-weight:700;border:1px solid var(--danger);border-radius:20px;margin-left:4px;">🆘 Emergência</button>
   </div>
 
   <!-- PAINEL -->
@@ -370,10 +408,13 @@
 
   <!-- ROTEIRO -->
   <div class="panel" id="panel-roteiro">
-    <p class="hint" style="margin-bottom:1.25rem;">Roteiro completo, agrupado por trecho. O dia atual (conforme a data de início) fica destacado em âmbar.</p>
+    <div class="toolbar">
+      <p class="hint" style="margin:0;">Roteiro completo, agrupado por trecho. O dia atual fica destacado.</p>
+      <button type="button" class="reset" id="print-roteiro">🖨️ Imprimir / exportar PDF</button>
+    </div>
     <div id="itinerary-list"></div>
     <div class="add-row" id="no-leg-hint" style="display:none;">
-      <span class="hint">Cadastre um trecho na aba Orçamento → Trechos (ou no Mapa) antes de adicionar dias ao roteiro.</span>
+      <span class="hint">Cadastre um trecho na aba Mapa antes de adicionar dias ao roteiro.</span>
     </div>
   </div>
 
@@ -398,6 +439,11 @@
     </div>
     <p class="hint" id="leg-add-status"></p>
 
+    <h2 class="section" style="font-size:16px;margin:1.5rem 0 1rem;">Seus trechos</h2>
+    <p class="hint" style="margin-bottom:.75rem;">Arraste ⠿ pra reordenar, ✎ pra renomear.</p>
+    <div id="leg-rows"></div>
+    <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
+
     <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Cadastrar ponto no mapa</h2>
     <p class="hint" style="margin-bottom:.75rem;">Digite o nome do local (ex: "Torre Eiffel", "Hotel X", "Embaixada do Brasil em Paris") — o sistema localiza automaticamente no mapa.</p>
     <div class="add-row" style="flex-direction:column;align-items:stretch;">
@@ -418,10 +464,10 @@
   <!-- ORÇAMENTO -->
   <div class="panel" id="panel-orcamento">
     <div class="tabs" style="border-bottom:none;margin-bottom:1.25rem;padding-top:0;position:static;">
-      <button class="subtab active" data-sub="geral" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Visão geral</button>
-      <button class="subtab" data-sub="cat" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Categorias</button>
-      <button class="subtab" data-sub="trechos" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Trechos</button>
-      <button class="subtab" data-sub="despesas" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;">Despesas</button>
+      <button class="subtab active" data-sub="geral" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Resumo</button>
+      <button class="subtab" data-sub="despesas" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Despesas</button>
+      <button class="subtab" data-sub="config" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Categorias</button>
+      <button class="subtab" data-sub="calc" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;">🧮 Calculadora</button>
     </div>
 
     <div class="subpanel active" id="sub-geral">
@@ -444,35 +490,75 @@
         <div class="legend" id="legend"></div>
       </div>
       <div id="detail">Clique em uma fatia do gráfico ou em uma categoria na legenda para ver o detalhe por dia e por pessoa.</div>
-
-      <h2 class="section" style="font-size:16px;margin:2rem 0 8px;">Onde o dinheiro está indo</h2>
-      <div class="progress-track" id="spend-track"></div>
-      <p class="hint" id="spend-label" style="margin-top:6px;"></p>
     </div>
 
-    <div class="subpanel" id="sub-cat" style="display:none;">
+    <div class="subpanel" id="sub-config" style="display:none;">
+      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Categorias</h2>
       <div class="toolbar">
-        <p class="hint">Edite o valor total estimado de cada categoria (para a viagem inteira, em R$)</p>
-        <button class="reset" id="reset-cat">↺ Restaurar estimativa original</button>
+        <p class="hint">Valor total estimado de cada categoria (para a viagem inteira, em R$)</p>
+        <button class="reset" id="reset-cat">↺ Restaurar</button>
       </div>
       <div id="cat-rows"></div>
       <div class="add-row">
         <input type="text" id="new-cat-name" placeholder="Nome da nova categoria">
         <input type="number" id="new-cat-value" placeholder="Valor R$" step="50" min="0">
-        <button id="add-cat">+ Adicionar categoria</button>
+        <button id="add-cat">+ Adicionar</button>
       </div>
-      <div class="total-line"><span>Total</span><span class="value" id="cat-total"></span></div>
-    </div>
+      <div class="total-line" style="margin-bottom:2rem;"><span>Total</span><span class="value" id="cat-total"></span></div>
 
-    <div class="subpanel" id="sub-trechos" style="display:none;">
-      <p class="hint" style="margin-bottom:1rem;">Dias e orçamento de cada trecho. Para cadastrar um novo trecho, use a aba Mapa (ele também vira um marcador lá).</p>
-      <div id="leg-rows"></div>
-      <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
+      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Orçamento por trecho</h2>
+      <p class="hint" style="margin-bottom:1rem;">Para renomear, reordenar ou excluir um trecho, use a aba Mapa.</p>
       <div class="barchart-box"><canvas id="legbar"></canvas></div>
 
-      <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Custo por dia, por cidade</h2>
-      <p class="hint" style="margin-bottom:1rem;">Compara o quanto cada cidade custa por dia — ajuda a decidir onde encurtar ou esticar a estadia.</p>
+      <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Onde o dinheiro está indo</h2>
+      <div class="progress-track" id="spend-track"></div>
+      <p class="hint" id="spend-label" style="margin-top:6px;margin-bottom:2rem;"></p>
+
+      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Custo por dia, por cidade</h2>
+      <p class="hint" style="margin-bottom:1rem;">Compara o quanto cada cidade custa por dia.</p>
       <div class="barchart-box"><canvas id="perdaybar"></canvas></div>
+    </div>
+
+    <div class="subpanel" id="sub-calc" style="display:none;">
+      <h2 class="section" style="font-size:16px;">Conversor de moeda</h2>
+      <p class="hint" style="margin-bottom:1rem;">Baseado na cotação que você pagou (Wise, Revolut etc.), não na cotação do dia — assim você vê se vale a pena comprar algo com o que já trocou.</p>
+
+      <div class="row" style="margin-bottom:1rem;">
+        <span class="icon">💱</span>
+        <span class="name">Cotação do Euro<span class="sub">o valor que você pagou por 1 EUR</span></span>
+        <span class="row-inputwrap"><span class="prefix">R$</span><input type="number" id="fx-rate-calc" step="0.01" min="0.1"></span>
+      </div>
+
+      <div class="row" style="flex-wrap:wrap;gap:10px;">
+        <input type="number" id="conv-amount" value="1" step="0.01" style="width:100px;">
+        <select id="conv-from"></select>
+        <button type="button" id="conv-swap" class="iconbtn primary-btn" title="Inverter">⇄</button>
+        <select id="conv-to"></select>
+      </div>
+      <p style="text-align:center;margin:14px 0 0;"><span id="conv-result" style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;font-weight:800;color:var(--numgreen);font-size:28px;"></span></p>
+
+      <details style="margin-top:2rem;">
+        <summary style="cursor:pointer;font-size:12px;color:var(--muted);">+ Cadastrar outra moeda (além de Real e Euro)</summary>
+        <div style="margin-top:10px;">
+          <div id="currency-rows"></div>
+          <div class="add-row" style="opacity:.85;">
+            <input type="text" id="new-cur-code" placeholder="Código (ex: USD)" style="width:100px;">
+            <input type="text" id="new-cur-name" placeholder="Nome (ex: Dólar)">
+            <input type="number" id="new-cur-rate" placeholder="R$ por unidade" step="0.01" min="0">
+            <button id="add-currency">+ Adicionar</button>
+          </div>
+        </div>
+      </details>
+
+      <h2 class="section" style="font-size:16px;margin-top:2.5rem;">Gorjeta e divisão de conta</h2>
+      <div class="row">
+        <span class="name">Moeda da conta</span>
+        <select id="tip-currency"></select>
+      </div>
+      <div class="row"><span class="name">Valor da conta</span><input type="number" id="tip-bill" step="0.01" min="0"></div>
+      <div class="row"><span class="name">Gorjeta</span><span class="row-inputwrap"><input type="number" id="tip-pct" value="10" step="1" min="0" style="width:70px;"><span class="prefix">%</span></span></div>
+      <div class="row"><span class="name">Pessoas</span><input type="number" id="tip-people" value="1" step="1" min="1" style="width:70px;"></div>
+      <div id="tip-result" style="margin-top:10px;"></div>
     </div>
 
     <div class="subpanel" id="sub-despesas" style="display:none;">
@@ -492,13 +578,21 @@
 
       <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Todas as despesas</h2>
       <div id="exp-rows"></div>
-      <div class="add-row">
-        <input type="text" id="new-exp-desc" placeholder="Descrição (ex: Hotel Paris)">
-        <select id="new-exp-cat"></select>
-        <select id="new-exp-leg"></select>
-        <input type="text" id="new-exp-person" placeholder="Pessoa (opcional)" style="width:120px;">
-        <input type="number" id="new-exp-value" placeholder="Valor R$" step="10" min="0">
-        <button id="add-exp">+ Adicionar despesa</button>
+      <div class="add-row" style="flex-direction:column;align-items:stretch;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="new-exp-desc" placeholder="Descrição (ex: Hotel Paris)" style="flex:1;min-width:140px;">
+          <select id="new-exp-cat" style="min-width:130px;"></select>
+          <input type="number" id="new-exp-value" placeholder="Valor R$" step="10" min="0" style="width:110px;">
+          <button id="add-exp">+ Adicionar</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" id="toggle-exp-details" class="reset" style="font-size:11px;padding:6px 10px;">+ mais detalhes (trecho, pessoa, meio)</button>
+        </div>
+        <div id="new-exp-details" style="display:none;gap:8px;flex-wrap:wrap;">
+          <select id="new-exp-leg"></select>
+          <input type="text" id="new-exp-person" placeholder="Pessoa (opcional)" style="width:120px;">
+          <select id="new-exp-mode" style="display:none;"></select>
+        </div>
       </div>
       <div class="total-line" style="margin-top:1rem;"><span>Total lançado</span><span class="value" id="exp-total"></span></div>
       <p class="hint" id="exp-total-eur" style="text-align:right;margin-top:4px;"></p>
@@ -512,9 +606,12 @@
   <div class="panel" id="panel-documentos">
     <p class="hint" id="doc-cleanup-note" style="margin-bottom:1rem;"></p>
 
-    <h2 class="section" style="font-size:16px;">Voos</h2>
+    <div class="toolbar">
+      <h2 class="section" style="font-size:16px;margin:0;">✈️ Voos</h2>
+      <button type="button" class="reset" id="toggle-flight-form">+ Adicionar voo</button>
+    </div>
     <div id="flights-list"></div>
-    <div class="add-row" style="flex-direction:column;align-items:stretch;">
+    <div class="add-row" id="flight-form" style="display:none;flex-direction:column;align-items:stretch;">
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <input type="text" id="fl-airline" placeholder="Companhia (ex: LATAM)" style="flex:1;min-width:120px;">
         <input type="text" id="fl-number" placeholder="Nº do voo" style="width:110px;">
@@ -525,17 +622,17 @@
         <input type="text" id="fl-to" placeholder="Destino (ex: CDG)" style="width:120px;">
         <input type="text" id="fl-seat" placeholder="Assento (ex: 14C)" style="width:110px;">
         <select id="fl-aircraft">
-          <option value="single">Corredor único (ex: A320/737) 3-3</option>
-          <option value="wide242">Dois corredores (ex: A330/767) 2-4-2</option>
-          <option value="wide333">Dois corredores grande (ex: 777/A350) 3-3-3</option>
-          <option value="regional">Regional pequeno (ex: ATR/E-Jet) 2-2</option>
+          <option value="single">Corredor único (A320/737)</option>
+          <option value="wide242">2 corredores (A330/767)</option>
+          <option value="wide333">2 corredores grande (777/A350)</option>
+          <option value="regional">Regional (ATR/E-Jet)</option>
         </select>
-        <button type="button" id="add-flight">+ Adicionar voo</button>
+        <button type="button" id="add-flight">+ Adicionar</button>
       </div>
     </div>
 
-    <h2 class="section" style="font-size:16px;margin-top:2rem;">Arquivos (PDFs)</h2>
-    <p class="hint" style="margin-bottom:1rem;">Passagens, ingressos, passaporte, comprovantes de hospedagem — tudo num só lugar. Documentos são apagados automaticamente depois que a data de retorno passar.</p>
+    <h2 class="section" style="font-size:16px;margin-top:2.5rem;">📎 Arquivos</h2>
+    <p class="hint" style="margin-bottom:1rem;">Apagados automaticamente após a data de retorno.</p>
     <div class="upload-box">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <select id="doc-category">
@@ -546,11 +643,52 @@
           <option value="outro">📄 Outro</option>
         </select>
         <input type="file" id="doc-file" accept="application/pdf">
-        <button type="button" id="doc-upload">+ Enviar PDF</button>
+        <button type="button" id="doc-upload">+ Enviar</button>
       </div>
       <p class="hint" id="doc-upload-status" style="margin-top:8px;"></p>
     </div>
+    <div id="doc-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;"></div>
     <div id="doc-list"></div>
+  </div>
+
+  <!-- EMERGÊNCIA -->
+  <div class="panel" id="panel-emergencia">
+    <p class="hint" style="margin-bottom:1.25rem;">Acesso rápido em caso de aperto — funciona mesmo offline, com os últimos dados salvos.</p>
+
+    <h2 class="section" style="font-size:16px;">Contatos</h2>
+    <div class="add-row" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="em-insurer" placeholder="Seguro viagem (nome)">
+        <input type="tel" id="em-insurer-phone" placeholder="Telefone do seguro">
+        <input type="text" id="em-policy" placeholder="Nº da apólice">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="em-contact" placeholder="Contato de emergência (nome)">
+        <input type="tel" id="em-contact-phone" placeholder="Telefone do contato">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="em-blood" placeholder="Tipo sanguíneo (opcional)" style="width:180px;">
+        <input type="text" id="em-allergies" placeholder="Alergias / condições médicas (opcional)" style="flex:1;min-width:180px;">
+      </div>
+    </div>
+    <div id="em-quickcall" style="margin-top:1rem;"></div>
+
+    <h2 class="section" style="font-size:16px;margin-top:2rem;">🏛️ Embaixadas e Consulados do Brasil</h2>
+    <p class="hint" style="margin-bottom:1rem;">Preenchi com dados que encontrei pesquisando fontes oficiais (Itamaraty) e cruzando com outras fontes. <b style="color:var(--danger);">Os consulados honorários (Estrasburgo e Lyon) mudam de endereço/cônsul com mais frequência — confira pelo 🔎 antes de viajar</b>, especialmente perto da data.</p>
+    <div id="embassy-rows"></div>
+    <details style="margin-top:.5rem;">
+      <summary style="cursor:pointer;font-size:12px;color:var(--muted);">+ Adicionar outra embaixada/consulado</summary>
+      <div class="add-row" style="margin-top:10px;">
+        <input type="text" id="new-emb-country" placeholder="País">
+        <input type="text" id="new-emb-name" placeholder="Nome (ex: Consulado-Geral em Milão)">
+        <input type="text" id="new-emb-url" placeholder="Link do site oficial (gov.br)" style="flex:1;min-width:160px;">
+        <button id="add-embassy">+ Adicionar</button>
+      </div>
+    </details>
+
+    <h2 class="section" style="font-size:16px;margin-top:2rem;">Hospitais e embaixadas cadastrados no Mapa</h2>
+    <p class="hint" style="margin-bottom:1rem;">Cadastre esses pontos na aba Mapa — eles aparecem aqui automaticamente.</p>
+    <div id="em-pois"></div>
   </div>
 
   <footer>Sistema vivo — ajuste datas e valores conforme suas reservas reais forem se confirmando.</footer>
@@ -688,6 +826,87 @@ function renderHome(){
 }
 function hashCode(s){ var h=0; for(var i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; } return h; }
 
+// ---------- ORÇAMENTO GERAL (TODAS AS VIAGENS) ----------
+function computeTripTotal(payload){
+  if(!payload || !payload.categories) return 0;
+  var cats=payload.categories, exps=payload.expenses||[];
+  return cats.reduce(function(a,c){
+    var ce=exps.filter(function(e){return e.categoryId===c.id;});
+    var v = ce.length ? ce.reduce(function(s,e){return s+e.value;},0) : c.value;
+    return a+v;
+  },0);
+}
+function loadGlobalOverview(){
+  document.getElementById('view-home').style.display='none';
+  document.getElementById('view-trip').style.display='none';
+  document.getElementById('view-global').style.display='block';
+  document.getElementById('global-content').innerHTML='<p class="hint">Carregando dados de todas as viagens…</p>';
+  if(!sb || !navigator.onLine){
+    document.getElementById('global-content').innerHTML='<p class="hint">📡 Sem conexão — o orçamento geral precisa buscar os dados de cada viagem, não funciona offline ainda.</p>';
+    return;
+  }
+  var promises=trips.map(function(t){
+    return sb.schema('viagem').from('trip_state').select('payload').eq('id',t.id).single().then(function(res){
+      return {trip:t, payload:(res.data && res.data.payload)?res.data.payload:null};
+    }).catch(function(){ return {trip:t, payload:null}; });
+  });
+  Promise.all(promises).then(renderGlobalOverview);
+}
+function renderGlobalOverview(results){
+  var grand=results.reduce(function(a,r){return a+computeTripTotal(r.payload);},0);
+  var html='<div class="cards">'+
+    '<div class="card"><p class="label">Total em todas as viagens</p><p class="value">'+brl(grand)+'</p></div>'+
+    '<div class="card"><p class="label">Viagens cadastradas</p><p class="value">'+results.length+'</p></div>'+
+    '</div>';
+
+  html+='<h2 class="section" style="font-size:16px;margin:1.5rem 0 1rem;">Por viagem</h2>';
+  results.slice().sort(function(a,b){return computeTripTotal(b.payload)-computeTripTotal(a.payload);}).forEach(function(r){
+    var icon=ICONS[r.trip.iconKey]||ICONS.globo;
+    var color=LEG_PALETTE[Math.abs(hashCode(r.trip.id))%LEG_PALETTE.length];
+    html+='<div class="row" style="cursor:pointer;" data-open="'+r.trip.id+'">'+
+      '<span style="width:32px;height:32px;border-radius:8px;background:'+color+';display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="width:18px;height:18px;display:inline-block;">'+icon.svg+'</span></span>'+
+      '<span class="name">'+esc(r.trip.name)+(r.payload?'':'<span class="sub">sem dados salvos ainda</span>')+'</span>'+
+      '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;font-size:15px;">'+brl(computeTripTotal(r.payload))+'</span></div>';
+  });
+
+  var byName={};
+  results.forEach(function(r){ if(!r.payload) return; (r.payload.categories||[]).forEach(function(c){
+    var exps=(r.payload.expenses||[]).filter(function(e){return e.categoryId===c.id;});
+    var v=exps.length?exps.reduce(function(s,e){return s+e.value;},0):c.value;
+    byName[c.name]=(byName[c.name]||0)+v;
+  }); });
+  var names=Object.keys(byName).sort(function(a,b){return byName[b]-byName[a];});
+  if(names.length){
+    html+='<h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Por categoria, somando tudo</h2>';
+    names.forEach(function(n){
+      html+='<div class="row"><span class="name">'+esc(n)+'</span><span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;font-size:15px;">'+brl(byName[n])+'</span></div>';
+    });
+  }
+
+  var byMode={};
+  results.forEach(function(r){ if(!r.payload) return; (r.payload.expenses||[]).forEach(function(e){ if(e.mode) byMode[e.mode]=(byMode[e.mode]||0)+e.value; }); });
+  var modes=Object.keys(byMode).sort(function(a,b){return byMode[b]-byMode[a];});
+  if(modes.length){
+    html+='<h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Por meio de transporte</h2>';
+    modes.forEach(function(m){
+      html+='<div class="row"><span class="name">'+transportModeLabel(m)+'</span><span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;font-size:15px;">'+brl(byMode[m])+'</span></div>';
+    });
+  }
+
+  document.getElementById('global-content').innerHTML=html;
+  document.querySelectorAll('[data-open]').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.getElementById('view-global').style.display='none';
+      openTrip(el.dataset.open);
+    });
+  });
+}
+document.getElementById('btn-global').addEventListener('click', loadGlobalOverview);
+document.getElementById('btn-back-home2').addEventListener('click', function(){
+  document.getElementById('view-global').style.display='none';
+  document.getElementById('view-home').style.display='block';
+});
+
 function renderIconPicker(){
   var sel='eiffel';
   var wrap=document.getElementById('icon-picker');
@@ -717,16 +936,19 @@ document.getElementById('nt-create').addEventListener('click', function(){
   renderHome();
   openTrip(id,true);
 });
+document.getElementById('print-roteiro').addEventListener('click', function(){ window.print(); });
 document.getElementById('btn-back-home').addEventListener('click', function(){
   document.getElementById('view-trip').style.display='none';
   document.getElementById('view-home').style.display='block';
-  history.replaceState(null,'','#');
+  try{ history.replaceState(null,'','#'); }catch(e){}
   loadTripsIndex();
 });
 
 // ---------- ESTADO DA VIAGEM ATUAL ----------
 var categories=[], legs=[], itinerary=[], expenses=[], pois=[], flights=[], documents=[];
-var MIN_R=0, MAX_R=0, PESSOAS=1, FX_RATE=6.00;
+var MIN_R=0, MAX_R=0, PESSOAS=1, FX_RATE=6.00, currencies=[];
+var emergency={insurer:'',insurerPhone:'',policy:'',contact:'',contactPhone:'',blood:'',allergies:''};
+var embassies=[];
 var donutChart=null, legChart=null, perDayChart=null, selectedCat=null, map=null;
 var editingDay=null;
 var typeMeta={
@@ -739,18 +961,23 @@ var activeFilters={atracao:true,hospedagem:true,hospital:true,embaixada:true};
 var poiLayers={};
 var userPos=null, userMarker=null, geoWatchId=null;
 
+var TRANSPORT_MODES=[{v:'aviao',l:'Avião',i:'✈️'},{v:'trem',l:'Trem',i:'🚆'},{v:'onibus',l:'Ônibus',i:'🚌'},{v:'carro',l:'Carro',i:'🚗'}];
+function isTransportCat(cat){ return !!cat && cat.name.toLowerCase().indexOf('transporte')>=0; }
+function transportModeLabel(v){ var m=TRANSPORT_MODES.find(function(x){return x.v===v;}); return m?m.i+' '+m.l:''; }
 function blankCategories(){
   return [
-    {id:'hosp',name:'Hospedagem',sub:'',icon:'🏨',color:'#8B5CF6',def:0,value:0},
-    {id:'alim',name:'Alimentação',sub:'',icon:'🍽️',color:'#EC4899',def:0,value:0},
-    {id:'transp',name:'Transporte interno',sub:'',icon:'🚆',color:'#2DD4BF',def:0,value:0},
-    {id:'passeios',name:'Passeios e ingressos',sub:'',icon:'🎟️',color:'#6366F1',def:0,value:0},
-    {id:'emerg',name:'Emergências e extras',sub:'',icon:'🆘',color:'#F472B6',def:0,value:0}
+    {id:'transp',name:'Transporte',sub:'',icon:'🚗',color:'#8B5CF6',def:0,value:0},
+    {id:'hosp',name:'Hospedagem',sub:'',icon:'🏨',color:'#EC4899',def:0,value:0},
+    {id:'alim',name:'Alimentação',sub:'',icon:'🍽️',color:'#2DD4BF',def:0,value:0},
+    {id:'moeda',name:'Compra de Moeda',sub:'',icon:'💱',color:'#6366F1',def:0,value:0},
+    {id:'ingressos',name:'Ingressos',sub:'',icon:'🎟️',color:'#F472B6',def:0,value:0}
   ];
 }
 function resetTripStateBlank(){
   categories=blankCategories(); legs=[]; itinerary=[]; expenses=[]; pois=[]; flights=[]; documents=[];
-  MIN_R=0; MAX_R=0; PESSOAS=1; FX_RATE=6.00;
+  MIN_R=0; MAX_R=0; PESSOAS=1; FX_RATE=6.00; currencies=[];
+  emergency={insurer:'',insurerPhone:'',policy:'',contact:'',contactPhone:'',blood:'',allergies:''};
+  embassies=[];
   selectedCat=null; editingDay=null;
 }
 
@@ -788,7 +1015,7 @@ function buildPayload(){
     startdate:document.getElementById('startdate').value,
     returndate:document.getElementById('returndate').value,
     pax:Number(document.getElementById('pax').value)||1,
-    goalMin:MIN_R, goalMax:MAX_R, fxRate:FX_RATE
+    goalMin:MIN_R, goalMax:MAX_R, fxRate:FX_RATE, currencies:currencies, emergency:emergency, embassies:embassies
   };
 }
 function saveSnapshotLocal(payload){ try{ localStorage.setItem(snapshotKey(), JSON.stringify(payload)); }catch(e){} }
@@ -808,6 +1035,9 @@ function applyPayload(p){
   if(p.goalMin!=null) MIN_R=p.goalMin;
   if(p.goalMax!=null) MAX_R=p.goalMax;
   if(p.fxRate) FX_RATE=p.fxRate;
+  if(p.currencies) currencies=p.currencies;
+  if(p.emergency) emergency=p.emergency;
+  if(p.embassies) embassies=p.embassies;
 }
 function saveNow(){
   if(!sb || !TRIP_ID) return;
@@ -909,11 +1139,14 @@ function openTrip(id, isNew){
   document.getElementById('startdate').value='';
   document.getElementById('returndate').value=t.returnDate||'';
   document.getElementById('pax').value=1;
-  history.replaceState(null,'','#trip-'+id);
+  try{ history.replaceState(null,'','#trip-'+id); }catch(e){}
 
   function afterLoad(){
     renderPainel(); renderItinerary(); initMap(); renderBudget(); renderLegRows(); renderLegBar();
-    syncGoalInputs(); renderFlights(); renderDocs(); checkDocCleanup(); updateTripRouteText();
+    syncGoalInputs(); renderFlights(); renderDocFilters(); renderDocs(); checkDocCleanup(); updateTripRouteText();
+    syncEmergencyInputs(); renderEmergencyQuickcall(); renderEmergencyPois();
+    seedEmbassiesIfEmpty(); renderEmbassyRows();
+    renderConverter(); renderCurrencyRows(); renderTipCalc();
   }
   afterLoad();
   if(!isNew){
@@ -935,7 +1168,10 @@ function syncGoalInputs(){
 }
 document.getElementById('fx-rate').addEventListener('input', function(){
   FX_RATE=Math.max(0.1, Number(this.value)||6);
-  renderBudget(); scheduleSave();
+  renderBudget();
+  var calcEl=document.getElementById('fx-rate-calc');
+  if(calcEl) calcEl.value=FX_RATE;
+  scheduleSave();
 });
 document.getElementById('pax').addEventListener('input', function(){
   PESSOAS=Math.max(1, Number(this.value)||1);
@@ -1021,15 +1257,28 @@ function renderPainel(){
   var tc=document.getElementById('today-card');
   if(cur){
     tc.style.display='block';
-    tc.innerHTML='<p class="tag">Hoje · dia '+cur.d+' de '+tripDays()+'</p><h3>'+esc(cur.theme)+'</h3>'+
+    tc.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;"><p class="tag">Hoje · dia '+cur.d+' de '+tripDays()+'</p><button type="button" class="iconbtn" id="today-share" title="Compartilhar">📤</button></div><h3>'+esc(cur.theme)+'</h3>'+
       '<div class="period"><b>Manhã</b><span>'+esc(cur.m)+'</span></div>'+
       '<div class="period"><b>Tarde</b><span>'+esc(cur.t)+'</span></div>'+
       '<div class="period"><b>Noite</b><span>'+esc(cur.n)+'</span></div>'+
       (cur.tip?'<div class="tip"><b>Dica</b> — '+esc(cur.tip)+'</div>':'');
+    document.getElementById('today-share').addEventListener('click', function(){ shareDayPlan(cur); });
   } else { tc.style.display='none'; }
 }
 
 // ---------- ROTEIRO ----------
+function shareDayPlan(it){
+  if(!it) return;
+  var start=getStartDate();
+  var d=new Date(start); d.setDate(d.getDate()+(it.d-1));
+  var text='Dia '+it.d+' · '+fmtDate(d)+' — '+it.theme+'\n\n'+
+    (it.m?'Manhã: '+it.m+'\n':'')+
+    (it.t?'Tarde: '+it.t+'\n':'')+
+    (it.n?'Noite: '+it.n+'\n':'')+
+    (it.tip?'\nDica: '+it.tip:'');
+  if(navigator.share){ navigator.share({title:it.theme,text:text}).catch(function(){}); }
+  else { prompt('Copie o roteiro do dia:', text); }
+}
 function renderItinerary(){
   var start=getStartDate(); var today=todayMidnight();
   document.getElementById('no-leg-hint').style.display = legs.length ? 'none':'flex';
@@ -1054,6 +1303,7 @@ function renderItinerary(){
         html+='<div class="day-card'+(isToday?' is-today':'')+'" id="day-'+it.d+'">'+
           '<div class="day-head"><div><span class="daynum">Dia '+it.d+' · '+fmtDate(d)+'</span><h3>'+esc(it.theme)+'</h3></div>'+
           '<div class="day-head-actions">'+(isToday?'<span class="dpill">Hoje</span>':'')+
+          '<button type="button" class="iconbtn day-share" data-id="'+it.d+'" title="Compartilhar">📤</button>'+
           '<button type="button" class="iconbtn" data-action="edit-day" data-id="'+it.d+'" title="Editar">✎</button>'+
           '<button type="button" class="iconbtn danger" data-action="del-day" data-id="'+it.d+'" title="Excluir">🗑</button>'+
           '</div></div>'+
@@ -1086,6 +1336,9 @@ function renderItinerary(){
   });
   document.getElementById('itinerary-list').innerHTML=html;
 
+  document.querySelectorAll('.day-share').forEach(function(btn){
+    btn.addEventListener('click', function(){ shareDayPlan(itinerary.find(function(x){return x.d===Number(btn.dataset.id);})); });
+  });
   document.querySelectorAll('[data-action="edit-day"]').forEach(function(btn){
     btn.addEventListener('click', function(){ editingDay=Number(btn.dataset.id); renderItinerary(); });
   });
@@ -1373,7 +1626,7 @@ function renderCatRows(){
     if(exps.length){ valueHtml='<span class="row-inputwrap"><span class="prefix">R$</span><span style="font-family:Inter,sans-serif;font-size:14px;padding:8px 4px;color:var(--amber);">'+brl(catValue(c))+'</span></span><span style="font-size:11px;color:var(--muted);">'+exps.length+' desp.</span>'; }
     else { valueHtml='<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" data-id="'+c.id+'" value="'+c.value+'"></span>'; }
     return '<div class="row"><span class="icon">'+c.icon+'</span><span class="name">'+esc(c.name)+'<span class="sub">'+(c.sub||'')+'</span></span><span class="pct" id="pct-'+c.id+'"></span>'+valueHtml+
-      '<span class="row-actions"><button type="button" class="iconbtn save cat-save" data-id="'+c.id+'" title="Salvar agora">✓</button><button type="button" class="iconbtn danger cat-del" data-id="'+c.id+'" title="Excluir categoria">🗑</button></span></div>';
+      '<span class="row-actions"><button type="button" class="iconbtn danger cat-del" data-id="'+c.id+'" title="Excluir categoria">🗑</button></span></div>';
   }).join('');
   var t=total();
   categories.forEach(function(c){ document.getElementById('pct-'+c.id).textContent=(t?Math.round(catValue(c)/t*100):0)+'%'; });
@@ -1381,7 +1634,6 @@ function renderCatRows(){
   document.querySelectorAll('#cat-rows input[type=number]').forEach(function(inp){
     inp.addEventListener('input', function(){ var c=categories.find(function(x){return x.id===inp.dataset.id;}); c.value=Math.max(0, Number(inp.value)||0); renderBudget(); renderPainel(); scheduleSave(); });
   });
-  document.querySelectorAll('.cat-save').forEach(function(btn){ btn.addEventListener('click', function(){ saveNow(); }); });
   document.querySelectorAll('.cat-del').forEach(function(btn){
     btn.addEventListener('click', function(){
       if(!confirm('Excluir esta categoria e todas as despesas lançadas nela?')) return;
@@ -1421,7 +1673,6 @@ function renderLegRows(){
       '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" class="leg-value" data-id="'+l.id+'" value="'+l.value+'"></span>'+
       '<span class="row-actions">'+
       '<button type="button" class="iconbtn leg-rename" data-id="'+l.id+'" title="'+(editingLegName===l.id?'Salvar nome':'Editar nome')+'">'+(editingLegName===l.id?'✓':'✎')+'</button>'+
-      '<button type="button" class="iconbtn save leg-save" data-id="'+l.id+'" title="Salvar agora">✓</button>'+
       '<button type="button" class="iconbtn danger leg-del" data-id="'+l.id+'" title="Excluir trecho">🗑</button>'+
       '</span></div>';
   }).join('');
@@ -1430,7 +1681,6 @@ function renderLegRows(){
   document.querySelectorAll('.leg-value').forEach(function(inp){
     inp.addEventListener('input', function(){ var l=legById(inp.dataset.id); l.value=Math.max(0, Number(inp.value)||0); document.getElementById('leg-total').textContent=brl(legTotal()); renderLegBar(); scheduleSave(); });
   });
-  document.querySelectorAll('.leg-save').forEach(function(btn){ btn.addEventListener('click', function(){ saveNow(); }); });
   document.querySelectorAll('.leg-del').forEach(function(btn){
     btn.addEventListener('click', function(){
       if(!confirm('Excluir este trecho? Os dias do roteiro ligados a ele também serão removidos.')) return;
@@ -1512,27 +1762,57 @@ function renderExpenseSummary(){
 function renderExpenseCatOptions(){
   document.getElementById('new-exp-cat').innerHTML=categories.map(function(c){ return '<option value="'+c.id+'">'+c.icon+' '+esc(c.name)+'</option>'; }).join('');
   document.getElementById('new-exp-leg').innerHTML=legSelectOptions('');
+  document.getElementById('new-exp-mode').innerHTML=TRANSPORT_MODES.map(function(m){ return '<option value="'+m.v+'">'+m.i+' '+m.l+'</option>'; }).join('');
+  toggleNewExpMode();
 }
+function toggleNewExpMode(){
+  var catSel=document.getElementById('new-exp-cat');
+  var cat=categories.find(function(c){return c.id===catSel.value;});
+  document.getElementById('new-exp-mode').style.display = isTransportCat(cat) ? 'inline-block' : 'none';
+}
+document.getElementById('new-exp-cat').addEventListener('change', toggleNewExpMode);
+document.getElementById('toggle-exp-details').addEventListener('click', function(){
+  var box=document.getElementById('new-exp-details');
+  var open=box.style.display==='flex';
+  box.style.display=open?'none':'flex';
+  this.textContent=open?'+ mais detalhes (trecho, pessoa, meio)':'− ocultar detalhes';
+});
 function initials(name){ name=(name||'').trim(); if(!name) return ''; var parts=name.split(/\s+/); return (parts[0][0]+(parts[1]?parts[1][0]:'')).toUpperCase(); }
 function avatarColor(name){ var h=0; for(var i=0;i<(name||'').length;i++){ h=((h<<5)-h)+name.charCodeAt(i); h|=0; } return LEG_PALETTE[Math.abs(h)%LEG_PALETTE.length]; }
-function avatarHtml(name){ if(!name) return '<span class="iconbtn" style="border-style:dashed;" title="Sem pessoa definida">?</span>'; return '<span class="iconbtn" style="background:'+avatarColor(name)+';color:#fff;border:none;font-weight:700;font-size:11px;" title="'+esc(name)+'">'+initials(name)+'</span>'; }
+function avatarHtml(name){ if(!name) return ''; return '<span class="iconbtn" style="background:'+avatarColor(name)+';color:#fff;border:none;font-weight:700;font-size:11px;" title="'+esc(name)+'">'+initials(name)+'</span>'; }
+var editingExpenseId=null;
 function renderExpenseRows(){
   document.getElementById('exp-rows').innerHTML = expenses.map(function(e){
     var cat=categories.find(function(c){return c.id===e.categoryId;});
-    var catOpts=categories.map(function(c){ return '<option value="'+c.id+'"'+(c.id===e.categoryId?' selected':'')+'>'+c.icon+' '+esc(c.name)+'</option>'; }).join('');
-    return '<div class="row">'+avatarHtml(e.person)+'<span class="icon">'+(cat?cat.icon:'💰')+'</span>'+
-      '<input type="text" class="exp-desc" data-id="'+e.id+'" value="'+esc(e.desc)+'" style="flex:1;min-width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
-      '<select class="exp-cat" data-id="'+e.id+'" style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:8px 6px;">'+catOpts+'</select>'+
-      '<select class="exp-leg" data-id="'+e.id+'" style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:8px 6px;">'+legSelectOptions(e.legId)+'</select>'+
-      '<input type="text" class="exp-person" data-id="'+e.id+'" value="'+esc(e.person||'')+'" placeholder="Pessoa" style="width:90px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:8px 8px;">'+
-      '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" class="exp-val" step="10" min="0" data-id="'+e.id+'" value="'+e.value+'"></span>'+
-      '<span class="row-actions"><button type="button" class="iconbtn danger exp-del" data-id="'+e.id+'" title="Excluir">🗑</button></span></div>';
+    var lg=legById(e.legId);
+    if(editingExpenseId===e.id){
+      var catOpts=categories.map(function(c){ return '<option value="'+c.id+'"'+(c.id===e.categoryId?' selected':'')+'>'+c.icon+' '+esc(c.name)+'</option>'; }).join('');
+      var modeOpts=TRANSPORT_MODES.map(function(m){ return '<option value="'+m.v+'"'+(m.v===e.mode?' selected':'')+'>'+m.i+' '+m.l+'</option>'; }).join('');
+      return '<div class="row" style="flex-wrap:wrap;">'+
+        '<span class="icon">'+(cat?cat.icon:'💰')+'</span>'+
+        '<input type="text" class="exp-desc" data-id="'+e.id+'" value="'+esc(e.desc)+'" style="flex:1;min-width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
+        '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" class="exp-val" step="10" min="0" data-id="'+e.id+'" value="'+e.value+'"></span>'+
+        '<span class="row-actions"><button type="button" class="iconbtn save exp-done" data-id="'+e.id+'" title="Fechar">✓</button><button type="button" class="iconbtn danger exp-del" data-id="'+e.id+'" title="Excluir">🗑</button></span>'+
+        '<div style="width:100%;display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">'+
+          '<select class="exp-cat" data-id="'+e.id+'">'+catOpts+'</select>'+
+          '<select class="exp-leg" data-id="'+e.id+'">'+legSelectOptions(e.legId)+'</select>'+
+          '<input type="text" class="exp-person" data-id="'+e.id+'" value="'+esc(e.person||'')+'" placeholder="Pessoa" style="width:110px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:8px 8px;">'+
+          (isTransportCat(cat)?'<select class="exp-mode" data-id="'+e.id+'">'+modeOpts+'</select>':'')+
+        '</div></div>';
+    }
+    return '<div class="row"><span class="icon">'+(cat?cat.icon:'💰')+'</span>'+avatarHtml(e.person)+
+      '<span class="name">'+esc(e.desc||'—')+'<span class="sub">'+(cat?esc(cat.name):'')+(e.mode?' · '+transportModeLabel(e.mode):'')+(lg?' · '+esc(lg.name):'')+'</span></span>'+
+      '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;font-size:15px;">'+brl(e.value)+'</span>'+
+      '<span class="row-actions"><button type="button" class="iconbtn exp-edit" data-id="'+e.id+'" title="Editar detalhes">✎</button><button type="button" class="iconbtn danger exp-del" data-id="'+e.id+'" title="Excluir">🗑</button></span></div>';
   }).join('');
   document.getElementById('exp-total').textContent=brl(expTotal());
+  document.querySelectorAll('.exp-edit').forEach(function(btn){ btn.addEventListener('click', function(){ editingExpenseId=btn.dataset.id; renderExpenseRows(); }); });
+  document.querySelectorAll('.exp-done').forEach(function(btn){ btn.addEventListener('click', function(){ editingExpenseId=null; renderExpenseRows(); renderBudget(); renderPainel(); scheduleSave(); }); });
   document.querySelectorAll('.exp-desc').forEach(function(inp){ inp.addEventListener('input', function(){ var e=expenses.find(function(x){return x.id===inp.dataset.id;}); e.desc=inp.value; scheduleSave(); }); });
-  document.querySelectorAll('.exp-cat').forEach(function(sel){ sel.addEventListener('change', function(){ var e=expenses.find(function(x){return x.id===sel.dataset.id;}); e.categoryId=sel.value; renderBudget(); renderPainel(); scheduleSave(); }); });
+  document.querySelectorAll('.exp-cat').forEach(function(sel){ sel.addEventListener('change', function(){ var e=expenses.find(function(x){return x.id===sel.dataset.id;}); e.categoryId=sel.value; if(!isTransportCat(categories.find(function(c){return c.id===sel.value;}))) e.mode=''; renderExpenseRows(); renderBudget(); renderPainel(); scheduleSave(); }); });
   document.querySelectorAll('.exp-leg').forEach(function(sel){ sel.addEventListener('change', function(){ var e=expenses.find(function(x){return x.id===sel.dataset.id;}); e.legId=sel.value; renderSpendMap(); scheduleSave(); }); });
-  document.querySelectorAll('.exp-person').forEach(function(inp){ inp.addEventListener('change', function(){ var e=expenses.find(function(x){return x.id===inp.dataset.id;}); e.person=inp.value.trim(); renderExpenseRows(); renderPersonSplit(); scheduleSave(); }); });
+  document.querySelectorAll('.exp-person').forEach(function(inp){ inp.addEventListener('change', function(){ var e=expenses.find(function(x){return x.id===inp.dataset.id;}); e.person=inp.value.trim(); renderPersonSplit(); scheduleSave(); }); });
+  document.querySelectorAll('.exp-mode').forEach(function(sel){ sel.addEventListener('change', function(){ var e=expenses.find(function(x){return x.id===sel.dataset.id;}); e.mode=sel.value; scheduleSave(); }); });
   document.querySelectorAll('.exp-val').forEach(function(inp){
     inp.addEventListener('input', function(){
       var e=expenses.find(function(x){return x.id===inp.dataset.id;}); e.value=Math.max(0, Number(inp.value)||0);
@@ -1541,12 +1821,12 @@ function renderExpenseRows(){
       scheduleSave();
     });
   });
-  document.querySelectorAll('.exp-del').forEach(function(btn){ btn.addEventListener('click', function(){ if(!confirm('Excluir esta despesa?')) return; expenses=expenses.filter(function(x){return x.id!==btn.dataset.id;}); renderBudget(); renderPainel(); scheduleSave(); }); });
+  document.querySelectorAll('.exp-del').forEach(function(btn){ btn.addEventListener('click', function(){ if(!confirm('Excluir esta despesa?')) return; expenses=expenses.filter(function(x){return x.id!==btn.dataset.id;}); editingExpenseId=null; renderBudget(); renderPainel(); scheduleSave(); }); });
 }
 function renderPersonSplit(){
   var box=document.getElementById('person-split');
   var withPerson=expenses.filter(function(e){return e.person;});
-  if(!withPerson.length){ box.innerHTML='<p class="hint">Atribua uma pessoa às despesas (campo "Pessoa" na lista abaixo) pra ver a divisão de custos aqui.</p>'; return; }
+  if(!withPerson.length){ box.innerHTML='<p class="hint">Atribua uma pessoa às despesas (em "mais detalhes" na lista abaixo) pra ver a divisão de custos aqui.</p>'; return; }
   var byPerson={};
   withPerson.forEach(function(e){ byPerson[e.person]=(byPerson[e.person]||0)+e.value; });
   var names=Object.keys(byPerson).sort(function(a,b){return byPerson[b]-byPerson[a];});
@@ -1556,10 +1836,12 @@ function renderPersonSplit(){
   }).join('');
 }
 document.getElementById('add-exp').addEventListener('click', function(){
-  var descInp=document.getElementById('new-exp-desc'), catSel=document.getElementById('new-exp-cat'), legSel=document.getElementById('new-exp-leg'), personInp=document.getElementById('new-exp-person'), valInp=document.getElementById('new-exp-value');
+  var descInp=document.getElementById('new-exp-desc'), catSel=document.getElementById('new-exp-cat'), legSel=document.getElementById('new-exp-leg'), personInp=document.getElementById('new-exp-person'), modeSel=document.getElementById('new-exp-mode'), valInp=document.getElementById('new-exp-value');
   var desc=descInp.value.trim(); var value=Math.max(0, Number(valInp.value)||0); var person=personInp.value.trim();
+  var cat=categories.find(function(c){return c.id===catSel.value;});
+  var mode=isTransportCat(cat)?modeSel.value:'';
   if(!desc || !catSel.value) return;
-  expenses.push({id:'exp_'+Date.now(),categoryId:catSel.value,legId:legSel.value,person:person,desc:desc,value:value});
+  expenses.push({id:'exp_'+Date.now(),categoryId:catSel.value,legId:legSel.value,person:person,mode:mode,desc:desc,value:value});
   descInp.value=''; valInp.value=''; personInp.value=''; renderBudget(); renderPainel(); scheduleSave();
 });
 function renderTopExpenses(){
@@ -1646,6 +1928,12 @@ function renderFlights(){
     btn.addEventListener('click', function(){ if(!confirm('Excluir este voo?')) return; flights=flights.filter(function(x){return x.id!==btn.dataset.id;}); renderFlights(); scheduleSave(); });
   });
 }
+document.getElementById('toggle-flight-form').addEventListener('click', function(){
+  var box=document.getElementById('flight-form');
+  var open=box.style.display==='flex';
+  box.style.display=open?'none':'flex';
+  this.textContent=open?'+ Adicionar voo':'− Fechar';
+});
 document.getElementById('add-flight').addEventListener('click', function(){
   var airline=document.getElementById('fl-airline').value.trim();
   var number=document.getElementById('fl-number').value.trim();
@@ -1664,8 +1952,24 @@ document.getElementById('add-flight').addEventListener('click', function(){
 // ---------- DOCUMENTOS: ARQUIVOS PDF ----------
 var DOC_CAT_META={ passagem:{icon:'✈️',label:'Passagem'}, ingresso:{icon:'🎟️',label:'Ingresso'}, passaporte:{icon:'🛂',label:'Passaporte/Visto'}, hospedagem:{icon:'🏨',label:'Hospedagem'}, outro:{icon:'📄',label:'Outro'} };
 function docPublicUrl(path){ if(!sb) return ''; return sb.storage.from(DOC_BUCKET).getPublicUrl(path).data.publicUrl; }
+var docFilter='';
+function renderDocFilters(){
+  var box=document.getElementById('doc-filters');
+  if(!documents.length){ box.innerHTML=''; return; }
+  var cats=Object.keys(DOC_CAT_META);
+  box.innerHTML='<button type="button" class="doc-filter-btn" data-cat="" style="font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:'+(docFilter===''?'var(--amber)':'transparent')+';color:'+(docFilter===''?'#fff':'var(--muted)')+';cursor:pointer;font-family:Inter,sans-serif;">Todos</button>'+
+    cats.map(function(c){
+      var m=DOC_CAT_META[c]; var on=docFilter===c;
+      return '<button type="button" class="doc-filter-btn" data-cat="'+c+'" style="font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:'+(on?'var(--amber)':'transparent')+';color:'+(on?'#fff':'var(--muted)')+';cursor:pointer;font-family:Inter,sans-serif;">'+m.icon+' '+m.label+'</button>';
+    }).join('');
+  document.querySelectorAll('.doc-filter-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ docFilter=btn.dataset.cat; renderDocFilters(); renderDocs(); });
+  });
+}
 function renderDocs(){
-  document.getElementById('doc-list').innerHTML = documents.map(function(d){
+  var list=docFilter?documents.filter(function(d){return d.category===docFilter;}):documents;
+  if(!list.length){ document.getElementById('doc-list').innerHTML='<p class="hint">'+(documents.length?'Nenhum documento nessa categoria.':'Nenhum documento enviado ainda.')+'</p>'; return; }
+  document.getElementById('doc-list').innerHTML = list.map(function(d){
     var meta=DOC_CAT_META[d.category]||DOC_CAT_META.outro;
     var url=docPublicUrl(d.path);
     return '<div class="doc-row"><span class="dicon">'+meta.icon+'</span><span class="dname">'+esc(d.name)+'<span class="sub">'+meta.label+'</span></span>'+
@@ -1699,7 +2003,7 @@ function renderDocs(){
       var d=documents.find(function(x){return x.id===btn.dataset.id;});
       if(sb && d) sb.storage.from(DOC_BUCKET).remove([d.path]).then(function(){});
       documents=documents.filter(function(x){return x.id!==btn.dataset.id;});
-      renderDocs(); scheduleSave();
+      renderDocFilters(); renderDocs(); scheduleSave();
     });
   });
 }
@@ -1716,8 +2020,170 @@ document.getElementById('doc-upload').addEventListener('click', function(){
     documents.push({id:'doc_'+Date.now(), name:file.name, category:cat, path:path, uploadedAt:new Date().toISOString()});
     fileInp.value='';
     statusEl.textContent='Enviado ✓'; statusEl.style.color='var(--success)';
-    renderDocs(); scheduleSave();
+    renderDocFilters(); renderDocs(); scheduleSave();
   });
+});
+// ---------- CALCULADORA ----------
+function toBRL(amount, code){ amount=Number(amount)||0; if(code==='BRL') return amount; if(code==='EUR') return amount*(FX_RATE||1); var c=currencies.find(function(x){return x.code===code;}); return c?amount*c.rate:amount; }
+function fromBRL(amountBRL, code){ if(code==='BRL') return amountBRL; if(code==='EUR') return amountBRL/(FX_RATE||1); var c=currencies.find(function(x){return x.code===code;}); return c&&c.rate?amountBRL/c.rate:amountBRL; }
+function convertCurrency(amount, fromCode, toCode){ return fromBRL(toBRL(amount,fromCode), toCode); }
+function currencyOptions(selected){
+  var opts=[{code:'BRL',name:'Real'},{code:'EUR',name:'Euro'}].concat(currencies);
+  return opts.map(function(c){ return '<option value="'+c.code+'"'+(c.code===selected?' selected':'')+'>'+c.code+' — '+esc(c.name)+'</option>'; }).join('');
+}
+function fmtCur(v, code){ if(code==='BRL') return brl(v); return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+code; }
+function renderConverter(){
+  var fromSel=document.getElementById('conv-from'), toSel=document.getElementById('conv-to');
+  var prevFrom=fromSel.value||'BRL', prevTo=toSel.value||'EUR';
+  fromSel.innerHTML=currencyOptions(prevFrom);
+  toSel.innerHTML=currencyOptions(prevTo);
+  document.getElementById('fx-rate-calc').value=FX_RATE;
+  renderTipCurrencyOptions();
+  updateConvResult();
+}
+function updateConvResult(){
+  var amount=Number(document.getElementById('conv-amount').value)||0;
+  var from=document.getElementById('conv-from').value, to=document.getElementById('conv-to').value;
+  var result=convertCurrency(amount, from, to);
+  document.getElementById('conv-result').textContent=fmtCur(result, to);
+}
+['conv-amount','conv-from','conv-to'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', updateConvResult);
+  document.getElementById(id).addEventListener('change', updateConvResult);
+});
+document.getElementById('conv-swap').addEventListener('click', function(){
+  var f=document.getElementById('conv-from'), t=document.getElementById('conv-to');
+  var tmp=f.value; f.value=t.value; t.value=tmp; updateConvResult();
+});
+function syncFxRate(newVal){
+  FX_RATE=Math.max(0.1, Number(newVal)||6);
+  document.getElementById('fx-rate').value=FX_RATE;
+  document.getElementById('fx-rate-calc').value=FX_RATE;
+  renderConverter(); scheduleSave();
+}
+document.getElementById('fx-rate-calc').addEventListener('input', function(){ syncFxRate(this.value); });
+function renderCurrencyRows(){
+  document.getElementById('currency-rows').innerHTML = currencies.length ? currencies.map(function(c){
+    return '<div class="row" style="opacity:.85;"><span class="name">'+c.code+' — '+esc(c.name)+'<span class="sub">R$ '+c.rate+' por unidade</span></span><button type="button" class="iconbtn danger cur-del" data-code="'+c.code+'">🗑</button></div>';
+  }).join('') : '<p class="hint">Nenhuma moeda extra cadastrada.</p>';
+  document.querySelectorAll('.cur-del').forEach(function(btn){
+    btn.addEventListener('click', function(){ currencies=currencies.filter(function(x){return x.code!==btn.dataset.code;}); renderCurrencyRows(); renderConverter(); scheduleSave(); });
+  });
+}
+document.getElementById('add-currency').addEventListener('click', function(){
+  var codeInp=document.getElementById('new-cur-code'), nameInp=document.getElementById('new-cur-name'), rateInp=document.getElementById('new-cur-rate');
+  var code=codeInp.value.trim().toUpperCase(); var name=nameInp.value.trim(); var rate=Number(rateInp.value)||0;
+  if(!code || !rate){ return; }
+  currencies=currencies.filter(function(c){return c.code!==code;});
+  currencies.push({code:code,name:name||code,rate:rate});
+  codeInp.value=''; nameInp.value=''; rateInp.value='';
+  renderCurrencyRows(); renderConverter(); scheduleSave();
+});
+function renderTipCurrencyOptions(){
+  var sel=document.getElementById('tip-currency');
+  var prev=sel.value||'EUR';
+  sel.innerHTML=currencyOptions(prev);
+}
+function renderTipCalc(){
+  function update(){
+    var code=document.getElementById('tip-currency').value||'EUR';
+    var bill=Number(document.getElementById('tip-bill').value)||0;
+    var pct=Number(document.getElementById('tip-pct').value)||0;
+    var people=Math.max(1, Number(document.getElementById('tip-people').value)||1);
+    var tip=bill*pct/100, total=bill+tip, perPerson=total/people;
+    var totalBRL=toBRL(total, code);
+    document.getElementById('tip-result').innerHTML =
+      '<div class="row"><span class="name">Gorjeta</span><span style="color:var(--numgreen);font-weight:700;font-family:Inter;">'+fmtCur(tip,code)+'</span></div>'+
+      '<div class="row"><span class="name">Total com gorjeta</span><span style="color:var(--numgreen);font-weight:700;font-family:Inter;">'+fmtCur(total,code)+'</span></div>'+
+      '<div class="row"><span class="name">Por pessoa ('+people+')</span><span style="color:var(--numgreen);font-weight:700;font-family:Inter;">'+fmtCur(perPerson,code)+'</span></div>'+
+      (code!=='BRL'?'<div class="row"><span class="name">Equivalente em Real</span><span style="color:var(--muted);font-weight:600;font-family:Inter;">'+brl(totalBRL)+'</span></div>':'');
+  }
+  document.getElementById('tip-currency').addEventListener('change', update);
+  ['tip-bill','tip-pct','tip-people'].forEach(function(id){ document.getElementById(id).addEventListener('input', update); });
+  update();
+}
+
+// ---------- EMERGÊNCIA ----------
+var EM_FIELDS=[['em-insurer','insurer'],['em-insurer-phone','insurerPhone'],['em-policy','policy'],['em-contact','contact'],['em-contact-phone','contactPhone'],['em-blood','blood'],['em-allergies','allergies']];
+function syncEmergencyInputs(){
+  EM_FIELDS.forEach(function(f){ document.getElementById(f[0]).value=emergency[f[1]]||''; });
+}
+EM_FIELDS.forEach(function(f){
+  document.getElementById(f[0]).addEventListener('input', function(){ emergency[f[1]]=this.value; renderEmergencyQuickcall(); scheduleSave(); });
+});
+function renderEmergencyQuickcall(){
+  var box=document.getElementById('em-quickcall');
+  var items=[];
+  if(emergency.insurerPhone) items.push({label:'📞 Ligar pro seguro',tel:emergency.insurerPhone});
+  if(emergency.contactPhone) items.push({label:'📞 Ligar pro contato',tel:emergency.contactPhone});
+  box.innerHTML=items.map(function(i){ return '<a href="tel:'+i.tel.replace(/[^0-9+]/g,'')+'" class="reset" style="display:inline-block;text-decoration:none;margin:0 8px 8px 0;">'+i.label+'</a>'; }).join('');
+}
+function renderEmergencyPois(){
+  var box=document.getElementById('em-pois');
+  var list=pois.filter(function(p){ return p.type==='hospital'||p.type==='embaixada'; });
+  if(!list.length){ box.innerHTML='<p class="hint">Nenhum hospital ou embaixada cadastrado ainda.</p>'; return; }
+  box.innerHTML=list.map(function(p){
+    var tm=typeMeta[p.type]; var lg=legById(p.legId);
+    var distText='';
+    if(userPos){ var d=distKm(userPos,p); distText=' · '+(d<1?Math.round(d*1000)+' m':d.toFixed(1)+' km'); }
+    return '<div class="row" style="cursor:pointer;" data-poi="'+p.id+'"><span class="icon">'+tm.icon+'</span><span class="name">'+esc(p.name)+'<span class="sub">'+tm.label+(lg?' · '+esc(lg.name):'')+distText+'</span></span></div>';
+  }).join('');
+  document.querySelectorAll('#em-pois .row').forEach(function(el){
+    el.addEventListener('click', function(){
+      var p=pois.find(function(x){return x.id===el.dataset.poi;});
+      document.querySelector('.tab[data-tab="mapa"]').click();
+      setTimeout(function(){ if(map && p){ map.setView([p.lat,p.lng],15); } },100);
+    });
+  });
+}
+function seedEmbassiesIfEmpty(){
+  if(embassies.length) return;
+  embassies=[
+    {id:'emb_es',country:'Espanha (cobre Madri)',name:'Embaixada do Brasil em Madri',
+      phone:'+34 91 700 46 50',email:'brasem.madrid@itamaraty.gov.br',address:'Calle de Almagro, 28, Madri',
+      search:'Embaixada do Brasil em Madrid telefone endereço site oficial gov.br'},
+    {id:'emb_fr_paris',country:'França (cobre região de Paris)',name:'Embaixada do Brasil em Paris',
+      phone:'+33 1 45 61 63 00',email:'',address:'34, Cours Albert 1er, 75008 Paris',
+      search:'Embaixada do Brasil em Paris telefone endereço site oficial gov.br'},
+    {id:'emb_fr_stras',country:'França (cobre Estrasburgo e Colmar — Bas-Rhin/Haut-Rhin)',name:'Consulado Honorário do Brasil em Estrasburgo',
+      phone:'+33 3 88 56 95 77',email:'consul.bresil.strasbourg@orange.fr',address:'11, route d\'Entzheim, 67113 Blaesheim (região de Estrasburgo), França',
+      search:'Consulado Honorário do Brasil em Estrasburgo gov.br telefone atualizado'},
+    {id:'emb_fr_lyon',country:'França (cobre Annecy — Haute-Savoie)',name:'Consulado Honorário do Brasil em Lyon',
+      phone:'+33 4 72 60 55 68',email:'bresil@consulat-lyon.fr',address:'63, avenue Maréchal de Saxe, 69004 Lyon, França',
+      search:'Consulado Honorário do Brasil em Lyon gov.br telefone atualizado cônsul Olivier Costa'},
+    {id:'emb_it',country:'Itália (cobre Milão, Santa Margherita Ligure e Portofino)',name:'Consulado-Geral do Brasil em Milão',
+      phone:'+39 02 777 1071',email:'assistencia.milao@itamaraty.gov.br',address:'Corso Europa, 12, 20122 Milão, Itália · Plantão de emergência (fins de semana/feriados): +39 335 727 8117',
+      search:'Consulado-Geral do Brasil em Milão telefone endereço site oficial gov.br'}
+  ];
+}
+function renderEmbassyRows(){
+  document.getElementById('embassy-rows').innerHTML = embassies.map(function(e){
+    var searchUrl='https://www.google.com/search?q='+encodeURIComponent(e.search||e.name);
+    return '<div class="row" style="flex-direction:column;align-items:stretch;gap:8px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'+
+        '<span class="name">'+esc(e.name)+'<span class="sub">'+esc(e.country)+'</span></span>'+
+        '<span class="row-actions"><a href="'+searchUrl+'" target="_blank" rel="noopener" class="iconbtn" title="Buscar dados oficiais">🔎</a><button type="button" class="iconbtn danger emb-del" data-id="'+e.id+'" title="Excluir">🗑</button></span>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+        '<input type="tel" class="emb-phone" data-id="'+e.id+'" value="'+esc(e.phone)+'" placeholder="Telefone com prefixo (ex: +33 1 xxxx-xxxx)" style="flex:1;min-width:180px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
+        '<input type="email" class="emb-email" data-id="'+e.id+'" value="'+esc(e.email)+'" placeholder="E-mail" style="flex:1;min-width:180px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
+      '</div>'+
+      '<input type="text" class="emb-address" data-id="'+e.id+'" value="'+esc(e.address)+'" placeholder="Endereço completo" style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
+      (e.phone?'<a href="tel:'+e.phone.replace(/[^0-9+]/g,'')+'" class="reset" style="text-decoration:none;display:inline-block;width:fit-content;">📞 Ligar</a>':'')+
+    '</div>';
+  }).join('');
+  document.querySelectorAll('.emb-phone').forEach(function(inp){ inp.addEventListener('change', function(){ var e=embassies.find(function(x){return x.id===inp.dataset.id;}); e.phone=inp.value.trim(); renderEmbassyRows(); scheduleSave(); }); });
+  document.querySelectorAll('.emb-email').forEach(function(inp){ inp.addEventListener('change', function(){ var e=embassies.find(function(x){return x.id===inp.dataset.id;}); e.email=inp.value.trim(); scheduleSave(); }); });
+  document.querySelectorAll('.emb-address').forEach(function(inp){ inp.addEventListener('change', function(){ var e=embassies.find(function(x){return x.id===inp.dataset.id;}); e.address=inp.value.trim(); scheduleSave(); }); });
+  document.querySelectorAll('.emb-del').forEach(function(btn){ btn.addEventListener('click', function(){ if(!confirm('Excluir esta embaixada/consulado?')) return; embassies=embassies.filter(function(x){return x.id!==btn.dataset.id;}); renderEmbassyRows(); scheduleSave(); }); });
+}
+document.getElementById('add-embassy').addEventListener('click', function(){
+  var countryInp=document.getElementById('new-emb-country'), nameInp=document.getElementById('new-emb-name'), urlInp=document.getElementById('new-emb-url');
+  var country=countryInp.value.trim(), name=nameInp.value.trim(), url=urlInp.value.trim();
+  if(!name) return;
+  embassies.push({id:'emb_'+Date.now(),country:country,name:name,phone:'',email:'',address:'',search:name+' telefone endereço site oficial'});
+  countryInp.value=''; nameInp.value=''; urlInp.value='';
+  renderEmbassyRows(); scheduleSave();
 });
 function checkDocCleanup(){
   var rd=document.getElementById('returndate').value;
@@ -1730,7 +2196,7 @@ function checkDocCleanup(){
       var paths=documents.map(function(d){return d.path;});
       sb.storage.from(DOC_BUCKET).remove(paths).then(function(){});
       documents=[];
-      renderDocs(); scheduleSave();
+      renderDocFilters(); renderDocs(); scheduleSave();
     }
     note.textContent='Esta viagem já terminou (retorno em '+rd.split('-').reverse().join('/')+') — os PDFs foram removidos automaticamente.';
     note.style.color='var(--muted)';
