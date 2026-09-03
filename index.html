@@ -673,6 +673,19 @@
     </div>
     <div id="em-quickcall" style="margin-top:1rem;"></div>
 
+    <h2 class="section" style="font-size:16px;margin-top:2rem;">🏥 Hospitais (geral e pediátrico)</h2>
+    <p class="hint" style="margin-bottom:1rem;">Um hospital geral e um pediátrico por cidade/região da viagem, pesquisados em fontes oficiais de saúde. <b style="color:var(--danger);">Em qualquer emergência real, ligue primeiro para o número de emergência do país</b> (Espanha/França: 112 · Itália: 112 ou 118) — o hospital exato é decidido por quem atende a ligação.</p>
+    <div id="hospital-rows"></div>
+    <details style="margin-top:.5rem;">
+      <summary style="cursor:pointer;font-size:12px;color:var(--muted);">+ Adicionar outro hospital</summary>
+      <div class="add-row" style="margin-top:10px;">
+        <input type="text" id="new-hosp-city" placeholder="Cidade/região">
+        <input type="text" id="new-hosp-name" placeholder="Nome do hospital">
+        <select id="new-hosp-type"><option value="geral">Geral</option><option value="pediatrico">Pediátrico</option></select>
+        <button id="add-hospital">+ Adicionar</button>
+      </div>
+    </details>
+
     <h2 class="section" style="font-size:16px;margin-top:2rem;">🏛️ Embaixadas e Consulados do Brasil</h2>
     <p class="hint" style="margin-bottom:1rem;">Preenchi com dados que encontrei pesquisando fontes oficiais (Itamaraty) e cruzando com outras fontes. <b style="color:var(--danger);">Os consulados honorários (Estrasburgo e Lyon) mudam de endereço/cônsul com mais frequência — confira pelo 🔎 antes de viajar</b>, especialmente perto da data.</p>
     <div id="embassy-rows"></div>
@@ -686,7 +699,7 @@
       </div>
     </details>
 
-    <h2 class="section" style="font-size:16px;margin-top:2rem;">Hospitais e embaixadas cadastrados no Mapa</h2>
+    <h2 class="section" style="font-size:16px;margin-top:2rem;">Pontos de hospital/embaixada cadastrados no Mapa</h2>
     <p class="hint" style="margin-bottom:1rem;">Cadastre esses pontos na aba Mapa — eles aparecem aqui automaticamente.</p>
     <div id="em-pois"></div>
   </div>
@@ -949,6 +962,7 @@ var categories=[], legs=[], itinerary=[], expenses=[], pois=[], flights=[], docu
 var MIN_R=0, MAX_R=0, PESSOAS=1, FX_RATE=6.00, currencies=[];
 var emergency={insurer:'',insurerPhone:'',policy:'',contact:'',contactPhone:'',blood:'',allergies:''};
 var embassies=[];
+var hospitals=[];
 var donutChart=null, legChart=null, perDayChart=null, selectedCat=null, map=null;
 var editingDay=null;
 var typeMeta={
@@ -978,6 +992,7 @@ function resetTripStateBlank(){
   MIN_R=0; MAX_R=0; PESSOAS=1; FX_RATE=6.00; currencies=[];
   emergency={insurer:'',insurerPhone:'',policy:'',contact:'',contactPhone:'',blood:'',allergies:''};
   embassies=[];
+  hospitals=[];
   selectedCat=null; editingDay=null;
 }
 
@@ -1015,7 +1030,7 @@ function buildPayload(){
     startdate:document.getElementById('startdate').value,
     returndate:document.getElementById('returndate').value,
     pax:Number(document.getElementById('pax').value)||1,
-    goalMin:MIN_R, goalMax:MAX_R, fxRate:FX_RATE, currencies:currencies, emergency:emergency, embassies:embassies
+    goalMin:MIN_R, goalMax:MAX_R, fxRate:FX_RATE, currencies:currencies, emergency:emergency, embassies:embassies, hospitals:hospitals
   };
 }
 function saveSnapshotLocal(payload){ try{ localStorage.setItem(snapshotKey(), JSON.stringify(payload)); }catch(e){} }
@@ -1038,6 +1053,7 @@ function applyPayload(p){
   if(p.currencies) currencies=p.currencies;
   if(p.emergency) emergency=p.emergency;
   if(p.embassies) embassies=p.embassies;
+  if(p.hospitals) hospitals=p.hospitals;
 }
 function saveNow(){
   if(!sb || !TRIP_ID) return;
@@ -1146,6 +1162,7 @@ function openTrip(id, isNew){
     syncGoalInputs(); renderFlights(); renderDocFilters(); renderDocs(); checkDocCleanup(); updateTripRouteText();
     syncEmergencyInputs(); renderEmergencyQuickcall(); renderEmergencyPois();
     seedEmbassiesIfEmpty(); renderEmbassyRows();
+    seedHospitalsIfEmpty(); renderHospitalRows();
     renderConverter(); renderCurrencyRows(); renderTipCalc();
   }
   afterLoad();
@@ -2126,9 +2143,10 @@ function renderEmergencyPois(){
     var tm=typeMeta[p.type]; var lg=legById(p.legId);
     var distText='';
     if(userPos){ var d=distKm(userPos,p); distText=' · '+(d<1?Math.round(d*1000)+' m':d.toFixed(1)+' km'); }
-    return '<div class="row" style="cursor:pointer;" data-poi="'+p.id+'"><span class="icon">'+tm.icon+'</span><span class="name">'+esc(p.name)+'<span class="sub">'+tm.label+(lg?' · '+esc(lg.name):'')+distText+'</span></span></div>';
+    return '<div class="row"><span class="icon">'+tm.icon+'</span><span class="name" style="cursor:pointer;" data-poi="'+p.id+'">'+esc(p.name)+'<span class="sub">'+tm.label+(lg?' · '+esc(lg.name):'')+distText+'</span></span>'+
+      '<span class="row-actions"><a href="https://www.google.com/maps/search/?api=1&query='+p.lat+','+p.lng+'" target="_blank" rel="noopener" class="iconbtn" title="Abrir no Google Maps">🗺️</a></span></div>';
   }).join('');
-  document.querySelectorAll('#em-pois .row').forEach(function(el){
+  document.querySelectorAll('#em-pois .name').forEach(function(el){
     el.addEventListener('click', function(){
       var p=pois.find(function(x){return x.id===el.dataset.poi;});
       document.querySelector('.tab[data-tab="mapa"]').click();
@@ -2136,6 +2154,57 @@ function renderEmergencyPois(){
     });
   });
 }
+function seedHospitalsIfEmpty(){
+  if(hospitals.length) return;
+  hospitals=[
+    {id:'hosp_madrid_g',city:'Madri',type:'geral',name:'Hospital Universitario La Paz',address:'Paseo de la Castellana, 261, 28046 Madri',search:'Hospital Universitario La Paz Madrid urgencias'},
+    {id:'hosp_madrid_p',city:'Madri',type:'pediatrico',name:'Hospital Infantil Universitario Niño Jesús',address:'Avenida de Menéndez Pelayo, 65, 28009 Madri',search:'Hospital Niño Jesús Madrid urgencias pediátricas'},
+    {id:'hosp_paris_g',city:'Paris',type:'geral',name:'Hôpital Hôtel-Dieu (AP-HP)',address:'1 Parvis Notre-Dame – Place Jean-Paul II, 75004 Paris · atende só a partir de 15 anos',search:'Hôpital Hôtel-Dieu Paris urgences adresse'},
+    {id:'hosp_paris_p',city:'Paris',type:'pediatrico',name:'Hôpital Necker-Enfants Malades',address:'149 Rue de Sèvres, 75015 Paris',search:'Hôpital Necker Enfants Malades urgences pédiatriques'},
+    {id:'hosp_stras',city:'Estrasburgo',type:'geral+pediatrico',name:'Hôpital de Hautepierre (CHU Strasbourg)',address:'1 Avenue Molière, 67200 Strasbourg — tem urgência geral e pediátrica',search:'Hôpital de Hautepierre Strasbourg urgences pédiatriques adresse'},
+    {id:'hosp_colmar',city:'Colmar',type:'geral+pediatrico',name:'Hôpitaux Civils de Colmar (Site Pasteur)',address:'39 Avenue de la Liberté, 68000 Colmar — tem urgência geral e pediátrica',search:'Hôpitaux Civils de Colmar urgences pédiatriques adresse'},
+    {id:'hosp_annecy',city:'Annecy',type:'geral+pediatrico',name:'Centre Hospitalier Annecy Genevois',address:'1 Avenue de l\'Hôpital, 74374 Epagny Metz-Tessy — tem urgência geral e pediátrica (0-15 anos)',search:'Centre Hospitalier Annecy Genevois urgences pédiatriques adresse'},
+    {id:'hosp_rapallo',city:'Santa Margherita Ligure / Portofino',type:'geral',name:'Ospedale di Rapallo (Nostra Signora di Montallegro)',address:'Via San Pietro, 8, 16035 Rapallo, Itália',search:'Ospedale di Rapallo pronto soccorso indirizzo'},
+    {id:'hosp_gaslini',city:'Santa Margherita Ligure / Portofino (via Genova)',type:'pediatrico',name:'Istituto Giannina Gaslini',address:'Via Gerolamo Gaslini, 5, 16147 Genova, Itália (0-14 anos)',search:'Istituto Giannina Gaslini Genova pronto soccorso pediatrico'},
+    {id:'hosp_milao_g',city:'Milão',type:'geral',name:'Policlinico di Milano (Ospedale Maggiore)',address:'Via Francesco Sforza, 28, 20122 Milão, Itália',search:'Policlinico di Milano pronto soccorso indirizzo'},
+    {id:'hosp_milao_p',city:'Milão',type:'pediatrico',name:'Ospedale dei Bambini Vittore Buzzi',address:'Via Castelvetro, 32, 20154 Milão, Itália',search:'Ospedale dei Bambini Vittore Buzzi Milano pronto soccorso pediatrico'}
+  ];
+}
+var HOSP_TYPE_LABEL={geral:'Geral',pediatrico:'👶 Pediátrico','geral+pediatrico':'Geral + 👶 Pediátrico'};
+function renderHospitalRows(){
+  document.getElementById('hospital-rows').innerHTML = hospitals.map(function(h){
+    var searchUrl='https://www.google.com/search?q='+encodeURIComponent(h.search||h.name);
+    return '<div class="row" style="flex-direction:column;align-items:stretch;gap:6px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'+
+        '<span class="name">'+esc(h.name)+'<span class="sub">'+esc(h.city)+' · '+(HOSP_TYPE_LABEL[h.type]||h.type)+'</span></span>'+
+        '<span class="row-actions">'+
+          '<button type="button" class="iconbtn hosp-maps" data-id="'+h.id+'" title="Abrir no Google Maps">🗺️</button>'+
+          '<a href="'+searchUrl+'" target="_blank" rel="noopener" class="iconbtn" title="Buscar/confirmar dados">🔎</a>'+
+          '<button type="button" class="iconbtn danger hosp-del" data-id="'+h.id+'" title="Excluir">🗑</button>'+
+        '</span>'+
+      '</div>'+
+      '<input type="text" class="hosp-address" data-id="'+h.id+'" value="'+esc(h.address)+'" style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
+    '</div>';
+  }).join('');
+  document.querySelectorAll('.hosp-address').forEach(function(inp){ inp.addEventListener('change', function(){ var h=hospitals.find(function(x){return x.id===inp.dataset.id;}); h.address=inp.value.trim(); scheduleSave(); }); });
+  document.querySelectorAll('.hosp-maps').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var h=hospitals.find(function(x){return x.id===btn.dataset.id;});
+      var addrInp=document.querySelector('.hosp-address[data-id="'+btn.dataset.id+'"]');
+      var q=(addrInp&&addrInp.value.trim())||h.address||h.name;
+      window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q), '_blank');
+    });
+  });
+  document.querySelectorAll('.hosp-del').forEach(function(btn){ btn.addEventListener('click', function(){ if(!confirm('Excluir este hospital?')) return; hospitals=hospitals.filter(function(x){return x.id!==btn.dataset.id;}); renderHospitalRows(); scheduleSave(); }); });
+}
+document.getElementById('add-hospital').addEventListener('click', function(){
+  var cityInp=document.getElementById('new-hosp-city'), nameInp=document.getElementById('new-hosp-name'), typeSel=document.getElementById('new-hosp-type');
+  var city=cityInp.value.trim(), name=nameInp.value.trim(), type=typeSel.value;
+  if(!name) return;
+  hospitals.push({id:'hosp_'+Date.now(),city:city,name:name,type:type,address:'',search:name+' '+city+' pronto soccorso urgências endereço'});
+  cityInp.value=''; nameInp.value='';
+  renderHospitalRows(); scheduleSave();
+});
 function seedEmbassiesIfEmpty(){
   if(embassies.length) return;
   embassies=[
@@ -2162,7 +2231,11 @@ function renderEmbassyRows(){
     return '<div class="row" style="flex-direction:column;align-items:stretch;gap:8px;">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'+
         '<span class="name">'+esc(e.name)+'<span class="sub">'+esc(e.country)+'</span></span>'+
-        '<span class="row-actions"><a href="'+searchUrl+'" target="_blank" rel="noopener" class="iconbtn" title="Buscar dados oficiais">🔎</a><button type="button" class="iconbtn danger emb-del" data-id="'+e.id+'" title="Excluir">🗑</button></span>'+
+        '<span class="row-actions">'+
+          '<button type="button" class="iconbtn emb-maps" data-id="'+e.id+'" title="Abrir no Google Maps">🗺️</button>'+
+          '<a href="'+searchUrl+'" target="_blank" rel="noopener" class="iconbtn" title="Buscar dados oficiais">🔎</a>'+
+          '<button type="button" class="iconbtn danger emb-del" data-id="'+e.id+'" title="Excluir">🗑</button>'+
+        '</span>'+
       '</div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
         '<input type="tel" class="emb-phone" data-id="'+e.id+'" value="'+esc(e.phone)+'" placeholder="Telefone com prefixo (ex: +33 1 xxxx-xxxx)" style="flex:1;min-width:180px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
@@ -2172,6 +2245,14 @@ function renderEmbassyRows(){
       (e.phone?'<a href="tel:'+e.phone.replace(/[^0-9+]/g,'')+'" class="reset" style="text-decoration:none;display:inline-block;width:fit-content;">📞 Ligar</a>':'')+
     '</div>';
   }).join('');
+  document.querySelectorAll('.emb-maps').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var e=embassies.find(function(x){return x.id===btn.dataset.id;});
+      var addrInp=document.querySelector('.emb-address[data-id="'+btn.dataset.id+'"]');
+      var q=(addrInp&&addrInp.value.trim())||e.address||e.name;
+      window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q), '_blank');
+    });
+  });
   document.querySelectorAll('.emb-phone').forEach(function(inp){ inp.addEventListener('change', function(){ var e=embassies.find(function(x){return x.id===inp.dataset.id;}); e.phone=inp.value.trim(); renderEmbassyRows(); scheduleSave(); }); });
   document.querySelectorAll('.emb-email').forEach(function(inp){ inp.addEventListener('change', function(){ var e=embassies.find(function(x){return x.id===inp.dataset.id;}); e.email=inp.value.trim(); scheduleSave(); }); });
   document.querySelectorAll('.emb-address').forEach(function(inp){ inp.addEventListener('change', function(){ var e=embassies.find(function(x){return x.id===inp.dataset.id;}); e.address=inp.value.trim(); scheduleSave(); }); });
