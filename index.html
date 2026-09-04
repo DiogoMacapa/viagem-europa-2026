@@ -164,6 +164,18 @@
   #view-trip{display:none;}
   .home-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:2rem;}
   .home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:2rem;}
+  .home-timeline{background:var(--bg-card);border:1px solid var(--border);border-radius:22px;padding:26px 26px 22px;margin-bottom:2rem;box-shadow:0 10px 30px -14px rgba(20,20,43,0.20);position:relative;overflow:hidden;}
+  .home-timeline::before{content:'';position:absolute;top:-60px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,0.14),transparent 70%);}
+  .home-timeline-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;margin-bottom:1.5rem;position:relative;z-index:1;}
+  .home-timeline-total{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:30px;color:var(--numgreen);margin:2px 0 0;line-height:1.2;}
+  .gantt-track{position:relative;z-index:1;}
+  .gantt-row{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+  .gantt-label{width:132px;flex-shrink:0;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+  .gantt-label:hover{color:var(--amber);}
+  .gantt-bar-track{flex:1;position:relative;height:32px;background:var(--bg-card-alt);border-radius:9px;}
+  .gantt-bar{position:absolute;top:0;height:100%;border-radius:9px;display:flex;align-items:center;padding:0 12px;font-size:12px;font-weight:800;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:#fff;white-space:nowrap;overflow:hidden;cursor:pointer;transition:filter .15s,transform .15s;box-shadow:0 3px 10px -2px rgba(0,0,0,0.25);}
+  .gantt-bar:hover{filter:brightness(1.12);transform:scaleY(1.1);}
+  .gantt-scale{display:flex;justify-content:space-between;font-family:'Inter',sans-serif;font-size:10.5px;color:var(--muted);margin-top:6px;padding-left:146px;position:relative;z-index:1;}
   .trip-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s;position:relative;}
   .trip-card:hover{transform:translateY(-3px);border-color:var(--amber);}
   .trip-card .art{height:130px;display:flex;align-items:center;justify-content:center;}
@@ -342,6 +354,8 @@
       <div class="route">Escolha uma viagem para entrar, ou cadastre uma nova</div>
       <p id="home-offline-banner" style="display:none;font-family:'Inter',sans-serif;font-size:11px;color:#fff;background:var(--danger);border-radius:20px;padding:5px 12px;margin:8px 0 0;position:relative;z-index:1;">📡 Sem conexão — mostrando a última lista de viagens salva neste aparelho.</p>
     </header>
+
+    <div id="home-timeline-card"></div>
 
     <div class="home-grid" id="home-grid"></div>
 
@@ -844,8 +858,63 @@ function renderHome(){
     document.getElementById('new-trip-form').classList.add('active');
     document.getElementById('new-trip-form').scrollIntoView({behavior:'smooth'});
   });
+  renderHomeTimeline();
 }
 function hashCode(s){ var h=0; for(var i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; } return h; }
+function fmtShort(d){ return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
+function renderHomeTimeline(){
+  var box=document.getElementById('home-timeline-card');
+  if(!trips.length){ box.innerHTML=''; return; }
+  if(!sb || !navigator.onLine){ box.innerHTML='<div class="home-timeline"><p class="hint">📡 A linha do tempo precisa de internet pra somar os orçamentos de todas as viagens.</p></div>'; return; }
+  box.innerHTML='<div class="home-timeline"><p class="hint">Calculando linha do tempo e orçamentos…</p></div>';
+  var promises=trips.map(function(t){
+    return sb.schema('viagem').from('trip_state').select('payload').eq('id',t.id).single().then(function(res){
+      return {trip:t, payload:(res.data && res.data.payload)?res.data.payload:null};
+    }).catch(function(){ return {trip:t, payload:null}; });
+  });
+  Promise.all(promises).then(renderHomeTimelineResult);
+}
+function renderHomeTimelineResult(results){
+  var box=document.getElementById('home-timeline-card');
+  var grand=results.reduce(function(a,r){return a+computeTripTotal(r.payload);},0);
+  var dated=[], undated=[];
+  results.forEach(function(r){
+    var p=r.payload;
+    var sd=p&&p.startdate?parseDateInput(p.startdate):null;
+    var rd=p&&p.returndate?parseDateInput(p.returndate):null;
+    if(sd && rd && rd>=sd){ dated.push({trip:r.trip, start:sd, end:rd, total:computeTripTotal(p)}); }
+    else { undated.push({trip:r.trip, total:computeTripTotal(p)}); }
+  });
+  var html='<div class="home-timeline">';
+  html+='<div class="home-timeline-header"><h2 class="section" style="font-size:16px;margin:0;">📅 Linha do tempo das viagens</h2>'+
+        '<div style="text-align:right;"><p class="hint" style="margin:0;">Total geral de todas as viagens</p><p class="home-timeline-total">'+brl(grand)+'</p></div></div>';
+  if(dated.length){
+    dated.sort(function(a,b){return a.start-b.start;});
+    var minDate=dated[0].start, maxDate=dated[0].end;
+    dated.forEach(function(d){ if(d.start<minDate) minDate=d.start; if(d.end>maxDate) maxDate=d.end; });
+    var totalSpan=Math.max(1,(maxDate-minDate));
+    html+='<div class="gantt-track">';
+    dated.forEach(function(d){
+      var color=LEG_PALETTE[Math.abs(hashCode(d.trip.id))%LEG_PALETTE.length];
+      var leftPct=((d.start-minDate)/totalSpan*100);
+      var widthPct=Math.max(6,((d.end-d.start)/totalSpan*100));
+      html+='<div class="gantt-row">'+
+        '<span class="gantt-label" data-open="'+d.trip.id+'" title="'+esc(d.trip.name)+'">'+esc(d.trip.name)+'</span>'+
+        '<div class="gantt-bar-track"><div class="gantt-bar" data-open="'+d.trip.id+'" style="left:'+leftPct+'%;width:'+widthPct+'%;background:'+color+';" title="'+esc(d.trip.name)+' · '+fmtShort(d.start)+' a '+fmtShort(d.end)+'">'+brl(d.total)+'</div></div>'+
+      '</div>';
+    });
+    html+='</div>';
+    html+='<div class="gantt-scale"><span>'+fmtShort(minDate)+'</span><span>'+fmtShort(maxDate)+'</span></div>';
+  }
+  if(undated.length){
+    html+='<p class="hint" style="margin-top:'+(dated.length?'14px':'0')+';">Sem datas definidas ainda: '+undated.map(function(u){return '<b style="color:var(--cream);">'+esc(u.trip.name)+'</b> ('+brl(u.total)+')';}).join(' · ')+'</p>';
+  }
+  html+='</div>';
+  box.innerHTML=html;
+  document.querySelectorAll('#home-timeline-card [data-open]').forEach(function(el){
+    el.addEventListener('click', function(){ openTrip(el.dataset.open); });
+  });
+}
 
 // ---------- ORÇAMENTO GERAL (TODAS AS VIAGENS) ----------
 function computeTripTotal(payload){
