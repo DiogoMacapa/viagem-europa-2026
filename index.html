@@ -168,14 +168,16 @@
   .home-timeline::before{content:'';position:absolute;top:-60px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,0.14),transparent 70%);}
   .home-timeline-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;margin-bottom:1.5rem;position:relative;z-index:1;}
   .home-timeline-total{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:30px;color:var(--numgreen);margin:2px 0 0;line-height:1.2;}
-  .gantt-track{position:relative;z-index:1;}
-  .gantt-row{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
-  .gantt-label{width:132px;flex-shrink:0;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
-  .gantt-label:hover{color:var(--amber);}
-  .gantt-bar-track{flex:1;position:relative;height:32px;background:var(--bg-card-alt);border-radius:9px;}
-  .gantt-bar{position:absolute;top:0;height:100%;border-radius:9px;display:flex;align-items:center;padding:0 12px;font-size:12px;font-weight:800;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:#fff;white-space:nowrap;overflow:hidden;cursor:pointer;transition:filter .15s,transform .15s;box-shadow:0 3px 10px -2px rgba(0,0,0,0.25);}
-  .gantt-bar:hover{filter:brightness(1.12);transform:scaleY(1.1);}
-  .gantt-scale{display:flex;justify-content:space-between;font-family:'Inter',sans-serif;font-size:10.5px;color:var(--muted);margin-top:6px;padding-left:146px;position:relative;z-index:1;}
+  .vtimeline{position:relative;padding-left:28px;}
+  .vtimeline::before{content:'';position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--border);}
+  .vtimeline-item{position:relative;padding-bottom:20px;}
+  .vtimeline-item:last-child{padding-bottom:0;}
+  .vtimeline-dot{position:absolute;left:-28px;top:2px;width:18px;height:18px;border-radius:50%;border:3px solid var(--bg-card);box-shadow:0 0 0 2px var(--border);}
+  .vtimeline-card{display:flex;justify-content:space-between;align-items:center;gap:14px;background:var(--bg-card-alt);border-radius:12px;padding:12px 16px;cursor:pointer;transition:transform .15s,box-shadow .15s;flex-wrap:wrap;}
+  .vtimeline-card:hover{transform:translateX(4px);box-shadow:0 4px 14px -4px rgba(139,92,246,0.35);}
+  .vtimeline-name{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;}
+  .vtimeline-dates{font-size:12px;color:var(--muted);margin-top:2px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;}
+  .vtimeline-total{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:800;color:var(--numgreen);font-size:16px;white-space:nowrap;}
   .trip-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s;position:relative;}
   .trip-card:hover{transform:translateY(-3px);border-color:var(--amber);}
   .trip-card .art{height:130px;display:flex;align-items:center;justify-content:center;}
@@ -184,6 +186,8 @@
   .trip-card .info h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:20px;margin:0 0 4px;letter-spacing:.01em;}
   .trip-card .info p{margin:0;font-size:12px;color:var(--muted);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;}
   .trip-card .del{position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.85);border:1px solid var(--border);color:var(--cream);border-radius:6px;width:26px;height:26px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .trip-card .rename{position:absolute;top:8px;right:40px;background:rgba(255,255,255,0.85);border:1px solid var(--border);color:var(--cream);border-radius:6px;width:26px;height:26px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .trip-card .rename:hover{border-color:var(--amber);color:var(--amber);}
   .trip-card .del:hover{border-color:var(--danger);color:var(--danger);}
   .new-trip-card{background:var(--bg-card-alt);border:1px dashed var(--border);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:210px;color:var(--muted);}
   .new-trip-card:hover{border-color:var(--amber);color:var(--amber);}
@@ -833,6 +837,7 @@ function renderHome(){
   var html=trips.map(function(t){
     var icon=ICONS[t.iconKey]||ICONS.globo;
     return '<div class="trip-card" data-id="'+t.id+'">'+
+      '<button type="button" class="rename" data-id="'+t.id+'" title="Editar nome">✎</button>'+
       '<button type="button" class="del" data-id="'+t.id+'" title="Excluir viagem">🗑</button>'+
       '<div class="art" style="background:linear-gradient(135deg,'+(LEG_PALETTE[Math.abs(hashCode(t.id))%LEG_PALETTE.length])+',var(--amber));">'+icon.svg+'</div>'+
       '<div class="info"><h3>'+esc(t.name)+'</h3><p>'+(t.returnDate?('retorno '+t.returnDate.split('-').reverse().join('/')):'sem data de retorno')+'</p></div>'+
@@ -840,6 +845,14 @@ function renderHome(){
   }).join('');
   html+='<div class="new-trip-card" id="new-trip-card"><span class="plus">+</span><span>Nova viagem</span></div>';
   grid.innerHTML=html;
+  document.querySelectorAll('.trip-card .rename').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var t=trips.find(function(x){return x.id===btn.dataset.id;});
+      var novo=prompt('Novo nome da viagem:', t.name);
+      if(novo && novo.trim()){ t.name=novo.trim(); saveTripsIndex(); renderHome(); }
+    });
+  });
   document.querySelectorAll('.trip-card').forEach(function(el){
     el.addEventListener('click', function(e){ if(e.target.classList.contains('del')) return; openTrip(el.dataset.id); });
   });
@@ -890,21 +903,16 @@ function renderHomeTimelineResult(results){
         '<div style="text-align:right;"><p class="hint" style="margin:0;">Total geral de todas as viagens</p><p class="home-timeline-total">'+brl(grand)+'</p></div></div>';
   if(dated.length){
     dated.sort(function(a,b){return a.start-b.start;});
-    var minDate=dated[0].start, maxDate=dated[0].end;
-    dated.forEach(function(d){ if(d.start<minDate) minDate=d.start; if(d.end>maxDate) maxDate=d.end; });
-    var totalSpan=Math.max(1,(maxDate-minDate));
-    html+='<div class="gantt-track">';
+    html+='<div class="vtimeline">';
     dated.forEach(function(d){
       var color=LEG_PALETTE[Math.abs(hashCode(d.trip.id))%LEG_PALETTE.length];
-      var leftPct=((d.start-minDate)/totalSpan*100);
-      var widthPct=Math.max(6,((d.end-d.start)/totalSpan*100));
-      html+='<div class="gantt-row">'+
-        '<span class="gantt-label" data-open="'+d.trip.id+'" title="'+esc(d.trip.name)+'">'+esc(d.trip.name)+'</span>'+
-        '<div class="gantt-bar-track"><div class="gantt-bar" data-open="'+d.trip.id+'" style="left:'+leftPct+'%;width:'+widthPct+'%;background:'+color+';" title="'+esc(d.trip.name)+' · '+fmtShort(d.start)+' a '+fmtShort(d.end)+'">'+brl(d.total)+'</div></div>'+
-      '</div>';
+      html+='<div class="vtimeline-item"><span class="vtimeline-dot" style="background:'+color+';"></span>'+
+        '<div class="vtimeline-card" data-open="'+d.trip.id+'">'+
+          '<div><p class="vtimeline-name">'+esc(d.trip.name)+'</p><p class="vtimeline-dates">'+fmtShort(d.start)+' → '+fmtShort(d.end)+'</p></div>'+
+          '<span class="vtimeline-total">'+brl(d.total)+'</span>'+
+        '</div></div>';
     });
     html+='</div>';
-    html+='<div class="gantt-scale"><span>'+fmtShort(minDate)+'</span><span>'+fmtShort(maxDate)+'</span></div>';
   }
   if(undated.length){
     html+='<p class="hint" style="margin-top:'+(dated.length?'14px':'0')+';">Sem datas definidas ainda: '+undated.map(function(u){return '<b style="color:var(--cream);">'+esc(u.trip.name)+'</b> ('+brl(u.total)+')';}).join(' · ')+'</p>';
