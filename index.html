@@ -170,7 +170,7 @@
   .home-timeline-total{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:30px;color:var(--numgreen);margin:2px 0 0;line-height:1.2;}
   .vtimeline{position:relative;padding-left:28px;}
   .vtimeline::before{content:'';position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--border);}
-  .vtimeline-item{position:relative;padding-bottom:20px;}
+  .vtimeline-item{position:relative;padding-bottom:8px;}
   .vtimeline-item:last-child{padding-bottom:0;}
   .vtimeline-dot{position:absolute;left:-28px;top:2px;width:18px;height:18px;border-radius:50%;border:3px solid var(--bg-card);box-shadow:0 0 0 2px var(--border);}
   .vtimeline-card{display:flex;justify-content:space-between;align-items:center;gap:14px;background:var(--bg-card-alt);border-radius:12px;padding:12px 16px;cursor:pointer;transition:transform .15s,box-shadow .15s;flex-wrap:wrap;}
@@ -178,6 +178,7 @@
   .vtimeline-name{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;}
   .vtimeline-dates{font-size:12px;color:var(--muted);margin-top:2px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;}
   .vtimeline-total{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:800;color:var(--numgreen);font-size:16px;white-space:nowrap;}
+  .vtimeline-gap{position:relative;margin:2px 0 18px;font-size:11.5px;color:var(--muted);font-style:italic;display:flex;align-items:center;gap:6px;}
   .trip-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s;position:relative;}
   .trip-card:hover{transform:translateY(-3px);border-color:var(--amber);}
   .trip-card .art{height:130px;display:flex;align-items:center;justify-content:center;}
@@ -406,7 +407,10 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="orcamento">Orçamento</button>
+    <button class="tab" data-tab="destinos">Destinos</button>
     <button class="tab" data-tab="documentos">Documentos</button>
+    <button class="tab" data-tab="calculadora">🧮 Calculadora</button>
+    <button class="tab" data-tab="configuracao">⚙️ Configuração</button>
     <button class="tab" data-tab="emergencia" id="tab-emergencia" style="font-weight:700;border:1px solid var(--danger);border-radius:20px;margin-left:4px;">🆘 Emergência</button>
   </div>
 
@@ -440,21 +444,6 @@
     <div id="map"></div>
     <div id="nearby-panel" style="margin-top:1.25rem;"></div>
 
-    <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Cadastrar trecho (cidade) da viagem</h2>
-    <p class="hint" style="margin-bottom:.75rem;">Cada trecho vira um grupo no Roteiro e um marcador no mapa.</p>
-    <div class="add-row">
-      <input type="text" id="new-leg-name" placeholder="Nome da cidade/trecho">
-      <input type="number" id="new-leg-days" placeholder="Dias" step="1" min="1" style="width:80px;">
-      <input type="number" id="new-leg-value" placeholder="Orçamento R$" step="50" min="0">
-      <button id="add-leg">+ Adicionar trecho</button>
-    </div>
-    <p class="hint" id="leg-add-status"></p>
-
-    <h2 class="section" style="font-size:16px;margin:1.5rem 0 1rem;">Seus trechos</h2>
-    <p class="hint" style="margin-bottom:.75rem;">Arraste ⠿ pra reordenar, ✎ pra renomear.</p>
-    <div id="leg-rows"></div>
-    <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
-
     <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Cadastrar ponto no mapa</h2>
     <p class="hint" style="margin-bottom:.75rem;">Digite o nome do local (ex: "Torre Eiffel", "Hotel X", "Embaixada do Brasil em Paris") — o sistema localiza automaticamente no mapa.</p>
     <div class="add-row" style="flex-direction:column;align-items:stretch;">
@@ -472,16 +461,37 @@
     <div id="poi-list" style="margin-top:1rem;"></div>
   </div>
 
+  <!-- DESTINOS -->
+  <div class="panel" id="panel-destinos">
+    <p class="hint" style="margin-bottom:1rem;">As cidades cadastradas aqui aparecem no cabeçalho da viagem, agrupam o Roteiro e viram marcadores no Mapa.</p>
+    <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Adicionar cidade</h2>
+    <div class="add-row">
+      <input type="text" id="new-leg-name" placeholder="Nome da cidade/trecho">
+      <input type="number" id="new-leg-days" placeholder="Dias" step="1" min="1" style="width:80px;">
+      <input type="number" id="new-leg-value" placeholder="Orçamento R$" step="50" min="0">
+      <button id="add-leg">+ Adicionar</button>
+    </div>
+    <p class="hint" id="leg-add-status"></p>
+
+    <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Suas cidades</h2>
+    <p class="hint" style="margin-bottom:.75rem;">Arraste ⠿ pra reordenar, ✎ pra editar o nome, 🗑 pra excluir.</p>
+    <div id="leg-rows"></div>
+    <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
+
+    <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Orçamento por cidade</h2>
+    <div class="barchart-box"><canvas id="legbar"></canvas></div>
+
+    <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Onde o dinheiro está indo</h2>
+    <div class="progress-track" id="spend-track"></div>
+    <p class="hint" id="spend-label" style="margin-top:6px;margin-bottom:2rem;"></p>
+
+    <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Custo por dia, por cidade</h2>
+    <p class="hint" style="margin-bottom:1rem;">Compara o quanto cada cidade custa por dia.</p>
+    <div class="barchart-box"><canvas id="perdaybar"></canvas></div>
+  </div>
+
   <!-- ORÇAMENTO -->
   <div class="panel active" id="panel-orcamento">
-    <div class="tabs" style="border-bottom:none;margin-bottom:1.25rem;padding-top:0;position:static;">
-      <button class="subtab active" data-sub="geral" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Resumo</button>
-      <button class="subtab" data-sub="despesas" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Despesas</button>
-      <button class="subtab" data-sub="config" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;margin-right:6px;">Categorias</button>
-      <button class="subtab" data-sub="calc" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted);background:var(--bg-card);border:1px solid var(--border);padding:8px 14px;cursor:pointer;border-radius:20px;">🧮 Calculadora</button>
-    </div>
-
-    <div class="subpanel active" id="sub-geral">
       <div class="datebar">
         <label for="startdate">Início</label>
         <input type="date" id="startdate">
@@ -510,9 +520,10 @@
         <div class="legend" id="legend"></div>
       </div>
       <div id="detail">Clique em uma fatia do gráfico ou em uma categoria na legenda para ver o detalhe por dia e por pessoa.</div>
-    </div>
+  </div>
 
-    <div class="subpanel" id="sub-config" style="display:none;">
+  <!-- CONFIGURAÇÃO -->
+  <div class="panel" id="panel-configuracao">
       <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Categorias</h2>
       <div class="toolbar">
         <p class="hint">Valor total estimado de cada categoria (para a viagem inteira, em R$)</p>
@@ -525,21 +536,10 @@
         <button id="add-cat">+ Adicionar</button>
       </div>
       <div class="total-line" style="margin-bottom:2rem;"><span>Total</span><span class="value" id="cat-total"></span></div>
+  </div>
 
-      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Orçamento por trecho</h2>
-      <p class="hint" style="margin-bottom:1rem;">Para renomear, reordenar ou excluir um trecho, use a aba Mapa.</p>
-      <div class="barchart-box"><canvas id="legbar"></canvas></div>
-
-      <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Onde o dinheiro está indo</h2>
-      <div class="progress-track" id="spend-track"></div>
-      <p class="hint" id="spend-label" style="margin-top:6px;margin-bottom:2rem;"></p>
-
-      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Custo por dia, por cidade</h2>
-      <p class="hint" style="margin-bottom:1rem;">Compara o quanto cada cidade custa por dia.</p>
-      <div class="barchart-box"><canvas id="perdaybar"></canvas></div>
-    </div>
-
-    <div class="subpanel" id="sub-calc" style="display:none;">
+  <!-- CALCULADORA -->
+  <div class="panel" id="panel-calculadora">
       <h2 class="section" style="font-size:16px;">Conversor de moeda</h2>
       <p class="hint" style="margin-bottom:1rem;">Baseado na cotação que você pagou (Wise, Revolut etc.), não na cotação do dia — assim você vê se vale a pena comprar algo com o que já trocou.</p>
 
@@ -579,47 +579,6 @@
       <div class="row"><span class="name">Gorjeta</span><span class="row-inputwrap"><input type="number" id="tip-pct" value="10" step="1" min="0" style="width:70px;"><span class="prefix">%</span></span></div>
       <div class="row"><span class="name">Pessoas</span><input type="number" id="tip-people" value="1" step="1" min="1" style="width:70px;"></div>
       <div id="tip-result" style="margin-top:10px;"></div>
-    </div>
-
-    <div class="subpanel" id="sub-despesas" style="display:none;">
-      <p class="hint" style="margin-bottom:1rem;">Lance cada despesa individual (ex: hotel de cada cidade), atribuindo categoria e trecho.</p>
-
-      <div class="row" style="margin-bottom:1rem;">
-        <span class="icon">💱</span>
-        <span class="name">Câmbio de referência<span class="sub">usado para mostrar o equivalente em euros</span></span>
-        <span class="row-inputwrap"><span class="prefix">R$</span><input type="number" id="fx-rate" step="0.05" min="0.1" value="6.00"></span>
-        <span class="hint" style="white-space:nowrap;">por €</span>
-      </div>
-
-      <div id="exp-summary" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;"></div>
-
-      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">🏆 Maiores despesas</h2>
-      <div id="top-expenses" style="margin-bottom:2rem;"></div>
-
-      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Todas as despesas</h2>
-      <div id="exp-rows"></div>
-      <div class="add-row" style="flex-direction:column;align-items:stretch;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <input type="text" id="new-exp-desc" placeholder="Descrição (ex: Hotel Paris)" style="flex:1;min-width:140px;">
-          <select id="new-exp-cat" style="min-width:130px;"></select>
-          <input type="number" id="new-exp-value" placeholder="Valor R$" step="10" min="0" style="width:110px;">
-          <button id="add-exp">+ Adicionar</button>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" id="toggle-exp-details" class="reset" style="font-size:11px;padding:6px 10px;">+ mais detalhes (trecho, pessoa, meio)</button>
-        </div>
-        <div id="new-exp-details" style="display:none;gap:8px;flex-wrap:wrap;">
-          <select id="new-exp-leg"></select>
-          <input type="text" id="new-exp-person" placeholder="Pessoa (opcional)" style="width:120px;">
-          <select id="new-exp-mode" style="display:none;"></select>
-        </div>
-      </div>
-      <div class="total-line" style="margin-top:1rem;"><span>Total lançado</span><span class="value" id="exp-total"></span></div>
-      <p class="hint" id="exp-total-eur" style="text-align:right;margin-top:4px;"></p>
-
-      <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Divisão por pessoa</h2>
-      <div id="person-split"></div>
-    </div>
   </div>
 
   <!-- DOCUMENTOS -->
@@ -887,6 +846,14 @@ function renderHomeTimeline(){
   });
   Promise.all(promises).then(renderHomeTimelineResult);
 }
+function formatGap(days){
+  if(days<=0) return null;
+  if(days<30) return days+' dia'+(days>1?'s':'');
+  var months=Math.floor(days/30), rem=days%30;
+  var txt=months+' mês'+(months>1?'es':'');
+  if(rem>0) txt+=' e '+rem+' dia'+(rem>1?'s':'');
+  return txt;
+}
 function renderHomeTimelineResult(results){
   var box=document.getElementById('home-timeline-card');
   var grand=results.reduce(function(a,r){return a+computeTripTotal(r.payload);},0);
@@ -904,13 +871,19 @@ function renderHomeTimelineResult(results){
   if(dated.length){
     dated.sort(function(a,b){return a.start-b.start;});
     html+='<div class="vtimeline">';
-    dated.forEach(function(d){
+    dated.forEach(function(d,i){
       var color=LEG_PALETTE[Math.abs(hashCode(d.trip.id))%LEG_PALETTE.length];
+      var durDays=Math.round((d.end-d.start)/86400000)+1;
       html+='<div class="vtimeline-item"><span class="vtimeline-dot" style="background:'+color+';"></span>'+
         '<div class="vtimeline-card" data-open="'+d.trip.id+'">'+
-          '<div><p class="vtimeline-name">'+esc(d.trip.name)+'</p><p class="vtimeline-dates">'+fmtShort(d.start)+' → '+fmtShort(d.end)+'</p></div>'+
+          '<div><p class="vtimeline-name">'+esc(d.trip.name)+'</p><p class="vtimeline-dates">'+fmtShort(d.start)+' → '+fmtShort(d.end)+' <span style="opacity:.7;">('+durDays+' dia'+(durDays>1?'s':'')+')</span></p></div>'+
           '<span class="vtimeline-total">'+brl(d.total)+'</span>'+
         '</div></div>';
+      if(i<dated.length-1){
+        var gapDays=Math.round((dated[i+1].start-d.end)/86400000)-1;
+        var gapTxt=formatGap(gapDays);
+        html+='<div class="vtimeline-gap">'+(gapTxt?'⏳ '+gapTxt+' até a próxima viagem':'⚠️ datas se sobrepõem ou emendam')+'</div>';
+      }
     });
     html+='</div>';
   }
@@ -1266,15 +1239,7 @@ function updateTripRouteText(){
 function syncGoalInputs(){
   document.getElementById('goal-min').value=MIN_R;
   document.getElementById('goal-max').value=MAX_R;
-  document.getElementById('fx-rate').value=FX_RATE;
 }
-document.getElementById('fx-rate').addEventListener('input', function(){
-  FX_RATE=Math.max(0.1, Number(this.value)||6);
-  renderBudget();
-  var calcEl=document.getElementById('fx-rate-calc');
-  if(calcEl) calcEl.value=FX_RATE;
-  scheduleSave();
-});
 document.getElementById('pax').addEventListener('input', function(){
   PESSOAS=Math.max(1, Number(this.value)||1);
   renderPainel(); updateTripRouteText(); scheduleSave();
@@ -1856,12 +1821,15 @@ function renderSpendMap(){
   label.textContent=brl(spendWithLeg)+' já lançados com trecho definido, de '+brl(expTotal())+' em despesas no total.';
 }
 function renderExpenseSummary(){
-  document.getElementById('exp-summary').innerHTML = categories.map(function(c){
+  var el=document.getElementById('exp-summary');
+  if(!el) return;
+  el.innerHTML = categories.map(function(c){
     var exps=catExpenses(c.id); if(!exps.length) return '';
     return '<span style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12px;">'+c.icon+' '+esc(c.name)+': <b style="color:var(--amber);">'+brl(catValue(c))+'</b></span>';
   }).join('');
 }
 function renderExpenseCatOptions(){
+  if(!document.getElementById('new-exp-cat')) return;
   document.getElementById('new-exp-cat').innerHTML=categories.map(function(c){ return '<option value="'+c.id+'">'+c.icon+' '+esc(c.name)+'</option>'; }).join('');
   document.getElementById('new-exp-leg').innerHTML=legSelectOptions('');
   document.getElementById('new-exp-mode').innerHTML=TRANSPORT_MODES.map(function(m){ return '<option value="'+m.v+'">'+m.i+' '+m.l+'</option>'; }).join('');
@@ -1869,11 +1837,14 @@ function renderExpenseCatOptions(){
 }
 function toggleNewExpMode(){
   var catSel=document.getElementById('new-exp-cat');
+  if(!catSel) return;
   var cat=categories.find(function(c){return c.id===catSel.value;});
   document.getElementById('new-exp-mode').style.display = isTransportCat(cat) ? 'inline-block' : 'none';
 }
-document.getElementById('new-exp-cat').addEventListener('change', toggleNewExpMode);
-document.getElementById('toggle-exp-details').addEventListener('click', function(){
+var newExpCatSel=document.getElementById('new-exp-cat');
+if(newExpCatSel) newExpCatSel.addEventListener('change', toggleNewExpMode);
+var toggleExpDetailsBtn=document.getElementById('toggle-exp-details');
+if(toggleExpDetailsBtn) toggleExpDetailsBtn.addEventListener('click', function(){
   var box=document.getElementById('new-exp-details');
   var open=box.style.display==='flex';
   box.style.display=open?'none':'flex';
@@ -1884,6 +1855,7 @@ function avatarColor(name){ var h=0; for(var i=0;i<(name||'').length;i++){ h=((h
 function avatarHtml(name){ if(!name) return ''; return '<span class="iconbtn" style="background:'+avatarColor(name)+';color:#fff;border:none;font-weight:700;font-size:11px;" title="'+esc(name)+'">'+initials(name)+'</span>'; }
 var editingExpenseId=null;
 function renderExpenseRows(){
+  if(!document.getElementById('exp-rows')) return;
   document.getElementById('exp-rows').innerHTML = expenses.map(function(e){
     var cat=categories.find(function(c){return c.id===e.categoryId;});
     var lg=legById(e.legId);
@@ -1927,6 +1899,7 @@ function renderExpenseRows(){
 }
 function renderPersonSplit(){
   var box=document.getElementById('person-split');
+  if(!box) return;
   var withPerson=expenses.filter(function(e){return e.person;});
   if(!withPerson.length){ box.innerHTML='<p class="hint">Atribua uma pessoa às despesas (em "mais detalhes" na lista abaixo) pra ver a divisão de custos aqui.</p>'; return; }
   var byPerson={};
@@ -1937,7 +1910,8 @@ function renderPersonSplit(){
       '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;font-size:15px;">'+brl(byPerson[n])+'</span></div>';
   }).join('');
 }
-document.getElementById('add-exp').addEventListener('click', function(){
+var addExpBtn=document.getElementById('add-exp');
+if(addExpBtn) addExpBtn.addEventListener('click', function(){
   var descInp=document.getElementById('new-exp-desc'), catSel=document.getElementById('new-exp-cat'), legSel=document.getElementById('new-exp-leg'), personInp=document.getElementById('new-exp-person'), modeSel=document.getElementById('new-exp-mode'), valInp=document.getElementById('new-exp-value');
   var desc=descInp.value.trim(); var value=Math.max(0, Number(valInp.value)||0); var person=personInp.value.trim();
   var cat=categories.find(function(c){return c.id===catSel.value;});
@@ -1948,6 +1922,7 @@ document.getElementById('add-exp').addEventListener('click', function(){
 });
 function renderTopExpenses(){
   var box=document.getElementById('top-expenses');
+  if(!box) return;
   if(!expenses.length){ box.innerHTML='<p class="hint">Nenhuma despesa lançada ainda.</p>'; return; }
   var top=expenses.slice().sort(function(a,b){return b.value-a.value;}).slice(0,8);
   box.innerHTML=top.map(function(e,i){
@@ -2159,7 +2134,6 @@ document.getElementById('conv-swap').addEventListener('click', function(){
 });
 function syncFxRate(newVal){
   FX_RATE=Math.max(0.1, Number(newVal)||6);
-  document.getElementById('fx-rate').value=FX_RATE;
   document.getElementById('fx-rate-calc').value=FX_RATE;
   renderConverter(); scheduleSave();
 }
