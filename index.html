@@ -129,11 +129,20 @@
   .tip-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.5;color:var(--muted);}
   .tip-card b{display:block;color:var(--cream);font-size:13px;margin-bottom:4px;}
 
-  .iconbtn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;width:30px;height:30px;font-size:13px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-  .iconbtn:hover{border-color:var(--amber);color:var(--amber);}
-  .iconbtn.danger:hover{border-color:var(--danger);color:var(--danger);}
-  .iconbtn.save:hover{border-color:var(--success);color:var(--success);}
-  .row-actions{display:flex;gap:6px;margin-left:auto;}
+  .iconbtn{
+    background:var(--bg-card-alt);border:1px solid var(--border);color:var(--muted);
+    border-radius:50%;width:34px;height:34px;font-size:14px;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;text-decoration:none;
+    transition:transform .15s ease,box-shadow .15s ease,background-color .15s ease,color .15s ease,border-color .15s ease;
+    box-shadow:0 1px 3px rgba(0,0,0,0.08);
+  }
+  .iconbtn:hover{border-color:var(--amber);color:var(--amber);background:color-mix(in srgb, var(--amber) 14%, var(--bg-card-alt));transform:translateY(-2px) scale(1.06);box-shadow:0 6px 14px -4px rgba(139,92,246,0.45);}
+  .iconbtn:active{transform:translateY(0) scale(0.96);}
+  .iconbtn.danger:hover{border-color:var(--danger);color:var(--danger);background:color-mix(in srgb, var(--danger) 14%, var(--bg-card-alt));box-shadow:0 6px 14px -4px rgba(240,70,107,0.45);}
+  .iconbtn.save:hover{border-color:var(--success);color:var(--success);background:color-mix(in srgb, var(--success) 14%, var(--bg-card-alt));box-shadow:0 6px 14px -4px rgba(45,212,191,0.45);}
+  .iconbtn.maps,[class*="-maps"]{border-color:var(--teal);color:var(--teal);}
+  .iconbtn.maps:hover,[class*="-maps"]:hover{background:color-mix(in srgb, var(--teal) 16%, var(--bg-card-alt));box-shadow:0 6px 14px -4px rgba(45,212,191,0.5);}
+  .row-actions{display:flex;gap:8px;margin-left:auto;}
   .add-row{display:flex;gap:8px;align-items:center;background:var(--bg-card-alt);border:1px dashed var(--border);border-radius:10px;padding:10px 14px;margin-top:6px;flex-wrap:wrap;}
   .add-row input[type=text]{flex:1;min-width:120px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;}
   .add-row input[type=number]{width:110px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:13px;padding:8px 10px;text-align:right;}
@@ -675,6 +684,7 @@
 
     <h2 class="section" style="font-size:16px;margin-top:2rem;">🏥 Hospitais (geral e pediátrico)</h2>
     <p class="hint" style="margin-bottom:1rem;">Um hospital geral e um pediátrico por cidade/região da viagem, pesquisados em fontes oficiais de saúde. <b style="color:var(--danger);">Em qualquer emergência real, ligue primeiro para o número de emergência do país</b> (Espanha/França: 112 · Itália: 112 ou 118) — o hospital exato é decidido por quem atende a ligação.</p>
+    <div id="nearest-hospital" style="margin-bottom:1rem;"></div>
     <div id="hospital-rows"></div>
     <details style="margin-top:.5rem;">
       <summary style="cursor:pointer;font-size:12px;color:var(--muted);">+ Adicionar outro hospital</summary>
@@ -1162,7 +1172,7 @@ function openTrip(id, isNew){
     syncGoalInputs(); renderFlights(); renderDocFilters(); renderDocs(); checkDocCleanup(); updateTripRouteText();
     syncEmergencyInputs(); renderEmergencyQuickcall(); renderEmergencyPois();
     seedEmbassiesIfEmpty(); renderEmbassyRows();
-    seedHospitalsIfEmpty(); renderHospitalRows();
+    seedHospitalsIfEmpty(); renderHospitalRows(); geocodeHospitalsIfNeeded();
     renderConverter(); renderCurrencyRows(); renderTipCalc();
   }
   afterLoad();
@@ -1468,7 +1478,7 @@ function toggleGeoloc(){
     navigator.geolocation.clearWatch(geoWatchId); geoWatchId=null; userPos=null;
     if(userMarker){ map.removeLayer(userMarker); userMarker=null; }
     status.textContent='Localização desativada.'; btn.textContent='📍 Ativar minha localização';
-    renderNearby(); return;
+    renderNearby(); renderNearestHospital(); renderHospitalRows(); return;
   }
   if(!navigator.geolocation){ status.textContent='Geolocalização não é suportada neste navegador.'; return; }
   status.textContent='Solicitando permissão…';
@@ -1477,7 +1487,7 @@ function toggleGeoloc(){
     if(!userMarker){ userMarker=L.circleMarker([userPos.lat,userPos.lng],{radius:9,color:'#fff',fillColor:'#2a78d6',fillOpacity:1,weight:2}).addTo(map).bindPopup('Você está aqui'); }
     else { userMarker.setLatLng([userPos.lat,userPos.lng]); }
     status.textContent='Localização ativa — atualizando ao vivo.'; btn.textContent='📍 Desativar minha localização';
-    renderNearby();
+    renderNearby(); renderNearestHospital(); renderHospitalRows();
   }, function(err){ status.textContent='Não foi possível obter sua localização: '+err.message; }, {enableHighAccuracy:true, maximumAge:10000});
 }
 document.getElementById('btn-geoloc').addEventListener('click', toggleGeoloc);
@@ -2144,7 +2154,7 @@ function renderEmergencyPois(){
     var distText='';
     if(userPos){ var d=distKm(userPos,p); distText=' · '+(d<1?Math.round(d*1000)+' m':d.toFixed(1)+' km'); }
     return '<div class="row"><span class="icon">'+tm.icon+'</span><span class="name" style="cursor:pointer;" data-poi="'+p.id+'">'+esc(p.name)+'<span class="sub">'+tm.label+(lg?' · '+esc(lg.name):'')+distText+'</span></span>'+
-      '<span class="row-actions"><a href="https://www.google.com/maps/search/?api=1&query='+p.lat+','+p.lng+'" target="_blank" rel="noopener" class="iconbtn" title="Abrir no Google Maps">🗺️</a></span></div>';
+      '<span class="row-actions"><a href="https://www.google.com/maps/search/?api=1&query='+p.lat+','+p.lng+'" target="_blank" rel="noopener" class="iconbtn maps" title="Abrir no Google Maps">🗺️</a></span></div>';
   }).join('');
   document.querySelectorAll('#em-pois .name').forEach(function(el){
     el.addEventListener('click', function(){
@@ -2157,28 +2167,59 @@ function renderEmergencyPois(){
 function seedHospitalsIfEmpty(){
   if(hospitals.length) return;
   hospitals=[
-    {id:'hosp_madrid_g',city:'Madri',type:'geral',name:'Hospital Universitario La Paz',address:'Paseo de la Castellana, 261, 28046 Madri',search:'Hospital Universitario La Paz Madrid urgencias'},
-    {id:'hosp_madrid_p',city:'Madri',type:'pediatrico',name:'Hospital Infantil Universitario Niño Jesús',address:'Avenida de Menéndez Pelayo, 65, 28009 Madri',search:'Hospital Niño Jesús Madrid urgencias pediátricas'},
-    {id:'hosp_paris_g',city:'Paris',type:'geral',name:'Hôpital Hôtel-Dieu (AP-HP)',address:'1 Parvis Notre-Dame – Place Jean-Paul II, 75004 Paris · atende só a partir de 15 anos',search:'Hôpital Hôtel-Dieu Paris urgences adresse'},
-    {id:'hosp_paris_p',city:'Paris',type:'pediatrico',name:'Hôpital Necker-Enfants Malades',address:'149 Rue de Sèvres, 75015 Paris',search:'Hôpital Necker Enfants Malades urgences pédiatriques'},
-    {id:'hosp_stras',city:'Estrasburgo',type:'geral+pediatrico',name:'Hôpital de Hautepierre (CHU Strasbourg)',address:'1 Avenue Molière, 67200 Strasbourg — tem urgência geral e pediátrica',search:'Hôpital de Hautepierre Strasbourg urgences pédiatriques adresse'},
-    {id:'hosp_colmar',city:'Colmar',type:'geral+pediatrico',name:'Hôpitaux Civils de Colmar (Site Pasteur)',address:'39 Avenue de la Liberté, 68000 Colmar — tem urgência geral e pediátrica',search:'Hôpitaux Civils de Colmar urgences pédiatriques adresse'},
-    {id:'hosp_annecy',city:'Annecy',type:'geral+pediatrico',name:'Centre Hospitalier Annecy Genevois',address:'1 Avenue de l\'Hôpital, 74374 Epagny Metz-Tessy — tem urgência geral e pediátrica (0-15 anos)',search:'Centre Hospitalier Annecy Genevois urgences pédiatriques adresse'},
-    {id:'hosp_rapallo',city:'Santa Margherita Ligure / Portofino',type:'geral',name:'Ospedale di Rapallo (Nostra Signora di Montallegro)',address:'Via San Pietro, 8, 16035 Rapallo, Itália',search:'Ospedale di Rapallo pronto soccorso indirizzo'},
-    {id:'hosp_gaslini',city:'Santa Margherita Ligure / Portofino (via Genova)',type:'pediatrico',name:'Istituto Giannina Gaslini',address:'Via Gerolamo Gaslini, 5, 16147 Genova, Itália (0-14 anos)',search:'Istituto Giannina Gaslini Genova pronto soccorso pediatrico'},
-    {id:'hosp_milao_g',city:'Milão',type:'geral',name:'Policlinico di Milano (Ospedale Maggiore)',address:'Via Francesco Sforza, 28, 20122 Milão, Itália',search:'Policlinico di Milano pronto soccorso indirizzo'},
-    {id:'hosp_milao_p',city:'Milão',type:'pediatrico',name:'Ospedale dei Bambini Vittore Buzzi',address:'Via Castelvetro, 32, 20154 Milão, Itália',search:'Ospedale dei Bambini Vittore Buzzi Milano pronto soccorso pediatrico'}
+    {id:'hosp_madrid_g',city:'Madri',type:'geral',name:'Hospital Universitario La Paz',address:'Paseo de la Castellana, 261, 28046 Madri',search:'Hospital Universitario La Paz Madrid urgencias',lat:null,lng:null},
+    {id:'hosp_madrid_p',city:'Madri',type:'pediatrico',name:'Hospital Infantil Universitario Niño Jesús',address:'Avenida de Menéndez Pelayo, 65, 28009 Madri',search:'Hospital Niño Jesús Madrid urgencias pediátricas',lat:null,lng:null},
+    {id:'hosp_paris_g',city:'Paris',type:'geral',name:'Hôpital Hôtel-Dieu (AP-HP)',address:'1 Parvis Notre-Dame – Place Jean-Paul II, 75004 Paris · atende só a partir de 15 anos',search:'Hôpital Hôtel-Dieu Paris urgences adresse',lat:null,lng:null},
+    {id:'hosp_paris_p',city:'Paris',type:'pediatrico',name:'Hôpital Necker-Enfants Malades',address:'149 Rue de Sèvres, 75015 Paris',search:'Hôpital Necker Enfants Malades urgences pédiatriques',lat:null,lng:null},
+    {id:'hosp_stras',city:'Estrasburgo',type:'geral+pediatrico',name:'Hôpital de Hautepierre (CHU Strasbourg)',address:'1 Avenue Molière, 67200 Strasbourg — tem urgência geral e pediátrica',search:'Hôpital de Hautepierre Strasbourg urgences pédiatriques adresse',lat:null,lng:null},
+    {id:'hosp_colmar',city:'Colmar',type:'geral+pediatrico',name:'Hôpitaux Civils de Colmar (Site Pasteur)',address:'39 Avenue de la Liberté, 68000 Colmar — tem urgência geral e pediátrica',search:'Hôpitaux Civils de Colmar urgences pédiatriques adresse',lat:null,lng:null},
+    {id:'hosp_annecy',city:'Annecy',type:'geral+pediatrico',name:'Centre Hospitalier Annecy Genevois',address:'1 Avenue de l\'Hôpital, 74374 Epagny Metz-Tessy — tem urgência geral e pediátrica (0-15 anos)',search:'Centre Hospitalier Annecy Genevois urgences pédiatriques adresse',lat:null,lng:null},
+    {id:'hosp_rapallo',city:'Santa Margherita Ligure / Portofino',type:'geral',name:'Ospedale di Rapallo (Nostra Signora di Montallegro)',address:'Via San Pietro, 8, 16035 Rapallo, Itália',search:'Ospedale di Rapallo pronto soccorso indirizzo',lat:null,lng:null},
+    {id:'hosp_gaslini',city:'Santa Margherita Ligure / Portofino (via Genova)',type:'pediatrico',name:'Istituto Giannina Gaslini',address:'Via Gerolamo Gaslini, 5, 16147 Genova, Itália (0-14 anos)',search:'Istituto Giannina Gaslini Genova pronto soccorso pediatrico',lat:null,lng:null},
+    {id:'hosp_milao_g',city:'Milão',type:'geral',name:'Policlinico di Milano (Ospedale Maggiore)',address:'Via Francesco Sforza, 28, 20122 Milão, Itália',search:'Policlinico di Milano pronto soccorso indirizzo',lat:null,lng:null},
+    {id:'hosp_milao_p',city:'Milão',type:'pediatrico',name:'Ospedale dei Bambini Vittore Buzzi',address:'Via Castelvetro, 32, 20154 Milão, Itália',search:'Ospedale dei Bambini Vittore Buzzi Milano pronto soccorso pediatrico',lat:null,lng:null}
   ];
 }
+function geocodeHospitalsIfNeeded(){
+  var pending=hospitals.filter(function(h){ return h.lat==null; });
+  if(!pending.length) return;
+  var i=0;
+  function next(){
+    if(i>=pending.length){ renderHospitalRows(); scheduleSave(); return; }
+    var h=pending[i++];
+    geocode(h.address||h.name).then(function(loc){
+      if(loc){ h.lat=loc.lat; h.lng=loc.lng; }
+      setTimeout(next,1100);
+    }).catch(function(){ setTimeout(next,1100); });
+  }
+  next();
+}
 var HOSP_TYPE_LABEL={geral:'Geral',pediatrico:'👶 Pediátrico','geral+pediatrico':'Geral + 👶 Pediátrico'};
+function renderNearestHospital(){
+  var box=document.getElementById('nearest-hospital');
+  var withCoords=hospitals.filter(function(h){ return h.lat!=null; });
+  if(!userPos){ box.innerHTML='<p class="hint">📍 Ative sua localização na aba Mapa pra eu te dizer qual hospital cadastrado está mais perto de você agora.</p>'; return; }
+  if(!withCoords.length){ box.innerHTML='<p class="hint">Localizando os hospitais no mapa… tenta de novo em alguns segundos.</p>'; return; }
+  var nearest=withCoords.map(function(h){ return {h:h, d:distKm(userPos,h)}; }).sort(function(a,b){return a.d-b.d;})[0];
+  var distText=nearest.d<1?Math.round(nearest.d*1000)+' m':nearest.d.toFixed(1)+' km';
+  box.innerHTML='<div class="row" style="border:1px solid var(--danger);">'+
+    '<span class="icon" style="font-size:20px;">🚑</span>'+
+    '<span class="name">Mais próximo agora: '+esc(nearest.h.name)+'<span class="sub">'+esc(nearest.h.city)+' · '+(HOSP_TYPE_LABEL[nearest.h.type]||nearest.h.type)+' · '+distText+'</span></span>'+
+    '<span class="row-actions"><a href="https://www.google.com/maps/search/?api=1&query='+nearest.h.lat+','+nearest.h.lng+'" target="_blank" rel="noopener" class="iconbtn maps" title="Ir até lá">🗺️</a></span>'+
+  '</div>';
+}
 function renderHospitalRows(){
-  document.getElementById('hospital-rows').innerHTML = hospitals.map(function(h){
+  var list=hospitals.slice();
+  if(userPos){ list=list.filter(function(h){return h.lat!=null;}).sort(function(a,b){return distKm(userPos,a)-distKm(userPos,b);}).concat(list.filter(function(h){return h.lat==null;})); }
+  document.getElementById('hospital-rows').innerHTML = list.map(function(h){
     var searchUrl='https://www.google.com/search?q='+encodeURIComponent(h.search||h.name);
+    var distText='';
+    if(userPos && h.lat!=null){ var d=distKm(userPos,h); distText=' · '+(d<1?Math.round(d*1000)+' m':d.toFixed(1)+' km'); }
     return '<div class="row" style="flex-direction:column;align-items:stretch;gap:6px;">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'+
-        '<span class="name">'+esc(h.name)+'<span class="sub">'+esc(h.city)+' · '+(HOSP_TYPE_LABEL[h.type]||h.type)+'</span></span>'+
+        '<span class="name">'+esc(h.name)+'<span class="sub">'+esc(h.city)+' · '+(HOSP_TYPE_LABEL[h.type]||h.type)+distText+'</span></span>'+
         '<span class="row-actions">'+
-          '<button type="button" class="iconbtn hosp-maps" data-id="'+h.id+'" title="Abrir no Google Maps">🗺️</button>'+
+          '<button type="button" class="iconbtn maps hosp-maps" data-id="'+h.id+'" title="Abrir no Google Maps">🗺️</button>'+
           '<a href="'+searchUrl+'" target="_blank" rel="noopener" class="iconbtn" title="Buscar/confirmar dados">🔎</a>'+
           '<button type="button" class="iconbtn danger hosp-del" data-id="'+h.id+'" title="Excluir">🗑</button>'+
         '</span>'+
@@ -2186,7 +2227,14 @@ function renderHospitalRows(){
       '<input type="text" class="hosp-address" data-id="'+h.id+'" value="'+esc(h.address)+'" style="background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:8px 10px;">'+
     '</div>';
   }).join('');
-  document.querySelectorAll('.hosp-address').forEach(function(inp){ inp.addEventListener('change', function(){ var h=hospitals.find(function(x){return x.id===inp.dataset.id;}); h.address=inp.value.trim(); scheduleSave(); }); });
+  document.querySelectorAll('.hosp-address').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var h=hospitals.find(function(x){return x.id===inp.dataset.id;});
+      h.address=inp.value.trim(); h.lat=null; h.lng=null;
+      scheduleSave();
+      geocodeHospitalsIfNeeded();
+    });
+  });
   document.querySelectorAll('.hosp-maps').forEach(function(btn){
     btn.addEventListener('click', function(){
       var h=hospitals.find(function(x){return x.id===btn.dataset.id;});
@@ -2195,15 +2243,17 @@ function renderHospitalRows(){
       window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q), '_blank');
     });
   });
-  document.querySelectorAll('.hosp-del').forEach(function(btn){ btn.addEventListener('click', function(){ if(!confirm('Excluir este hospital?')) return; hospitals=hospitals.filter(function(x){return x.id!==btn.dataset.id;}); renderHospitalRows(); scheduleSave(); }); });
+  document.querySelectorAll('.hosp-del').forEach(function(btn){ btn.addEventListener('click', function(){ if(!confirm('Excluir este hospital?')) return; hospitals=hospitals.filter(function(x){return x.id!==btn.dataset.id;}); renderHospitalRows(); renderNearestHospital(); scheduleSave(); }); });
+  renderNearestHospital();
 }
 document.getElementById('add-hospital').addEventListener('click', function(){
   var cityInp=document.getElementById('new-hosp-city'), nameInp=document.getElementById('new-hosp-name'), typeSel=document.getElementById('new-hosp-type');
   var city=cityInp.value.trim(), name=nameInp.value.trim(), type=typeSel.value;
   if(!name) return;
-  hospitals.push({id:'hosp_'+Date.now(),city:city,name:name,type:type,address:'',search:name+' '+city+' pronto soccorso urgências endereço'});
+  hospitals.push({id:'hosp_'+Date.now(),city:city,name:name,type:type,address:'',search:name+' '+city+' pronto soccorso urgências endereço',lat:null,lng:null});
   cityInp.value=''; nameInp.value='';
   renderHospitalRows(); scheduleSave();
+  geocodeHospitalsIfNeeded();
 });
 function seedEmbassiesIfEmpty(){
   if(embassies.length) return;
