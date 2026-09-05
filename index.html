@@ -105,6 +105,16 @@
   #today-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:22px;margin:0 0 10px;}
 
   .leg-group{margin-bottom:1.75rem;}
+  .city-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;}
+  .city-card.is-base{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber);}
+  .city-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+  .city-name-wrap{flex:1;min-width:120px;display:flex;align-items:center;gap:8px;}
+  .base-badge{font-size:10px;font-weight:700;background:var(--amber);color:#fff;border-radius:20px;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em;}
+  .city-expenses{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+  .city-exp-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+  .city-exp-row select{background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:7px 8px;flex:1;min-width:120px;}
+  .city-exp-row input[type=number]{width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:13px;padding:7px 8px;text-align:right;}
+  .city-exp-total{font-size:12px;color:var(--muted);margin-top:6px;text-align:right;}
   .leg-title{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:20px;letter-spacing:.02em;color:var(--amber);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
   .day-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;scroll-margin-top:70px;}
   .day-card.is-today{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber);}
@@ -464,6 +474,18 @@
   <!-- DESTINOS -->
   <div class="panel" id="panel-destinos">
     <p class="hint" style="margin-bottom:1rem;">As cidades cadastradas aqui aparecem no cabeçalho da viagem, agrupam o Roteiro e viram marcadores no Mapa.</p>
+    <div id="days-limit-status" style="margin-bottom:1rem;"></div>
+
+    <h2 class="section" style="font-size:16px;margin-bottom:1rem;">💼 Despesas Gerais da Viagem</h2>
+    <p class="hint" style="margin-bottom:1rem;">Passagens aéreas, compra de moeda, transporte entre cidades — tudo que não é de uma cidade específica.</p>
+    <div id="general-exp-rows"></div>
+    <div class="add-row">
+      <input type="text" id="new-genexp-desc" placeholder="Descrição (ex: SP → Madri)" style="flex:1;min-width:100px;">
+      <select id="new-genexp-cat"></select>
+      <input type="number" id="new-genexp-value" placeholder="Valor R$" step="10" min="0">
+      <button id="add-genexp">+ Adicionar</button>
+    </div>
+    <div class="total-line" style="margin-bottom:2rem;"><span>Total das despesas gerais</span><span class="value" id="genexp-total"></span></div>
     <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Adicionar cidade</h2>
     <div class="add-row">
       <input type="text" id="new-leg-name" placeholder="Nome da cidade/trecho">
@@ -474,7 +496,7 @@
     <p class="hint" id="leg-add-status"></p>
 
     <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Suas cidades</h2>
-    <p class="hint" style="margin-bottom:.75rem;">Arraste ⠿ pra reordenar, ✎ pra editar o nome, 🗑 pra excluir.</p>
+    <p class="hint" style="margin-bottom:.75rem;">Arraste ⠿ pra reordenar · ✎ editar nome · 🏠 marcar como cidade base · lance as despesas de cada cidade dentro do card dela.</p>
     <div id="leg-rows"></div>
     <div class="total-line" style="margin-bottom:1.5rem;"><span>Total</span><span class="value" id="leg-total"></span></div>
 
@@ -524,7 +546,14 @@
 
   <!-- CONFIGURAÇÃO -->
   <div class="panel" id="panel-configuracao">
-      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Categorias</h2>
+      <h2 class="section" style="font-size:16px;margin-bottom:1rem;">Limite de dias da viagem</h2>
+      <p class="hint" style="margin-bottom:1rem;">A soma dos dias de todas as cidades (em Destinos) não pode passar deste limite. Deixe 0 pra não limitar.</p>
+      <div class="row">
+        <span class="name">Limite de dias de férias</span>
+        <input type="number" id="max-days" min="0" step="1" style="width:80px;">
+      </div>
+
+      <h2 class="section" style="font-size:16px;margin:2rem 0 1rem;">Categorias</h2>
       <div class="toolbar">
         <p class="hint">Valor total estimado de cada categoria (para a viagem inteira, em R$)</p>
         <button class="reset" id="reset-cat">↺ Restaurar</button>
@@ -600,6 +629,7 @@
         <input type="text" id="fl-from" placeholder="Origem (ex: GRU)" style="width:120px;">
         <input type="text" id="fl-to" placeholder="Destino (ex: CDG)" style="width:120px;">
         <input type="text" id="fl-seat" placeholder="Assento (ex: 14C)" style="width:110px;">
+        <input type="number" id="fl-value" placeholder="Valor R$" step="10" min="0" style="width:110px;">
         <select id="fl-aircraft">
           <option value="single">Corredor único (A320/737)</option>
           <option value="wide242">2 corredores (A330/767)</option>
@@ -1017,7 +1047,7 @@ document.getElementById('btn-back-home').addEventListener('click', function(){
 
 // ---------- ESTADO DA VIAGEM ATUAL ----------
 var categories=[], legs=[], itinerary=[], expenses=[], pois=[], flights=[], documents=[];
-var MIN_R=0, MAX_R=0, PESSOAS=1, FX_RATE=6.00, currencies=[];
+var MIN_R=0, MAX_R=0, PESSOAS=1, FX_RATE=6.00, currencies=[], MAX_DAYS=0;
 var emergency={insurer:'',insurerPhone:'',policy:'',contact:'',contactPhone:'',blood:'',allergies:''};
 var embassies=[];
 var hospitals=[];
@@ -1047,7 +1077,7 @@ function blankCategories(){
 }
 function resetTripStateBlank(){
   categories=blankCategories(); legs=[]; itinerary=[]; expenses=[]; pois=[]; flights=[]; documents=[];
-  MIN_R=0; MAX_R=0; PESSOAS=1; FX_RATE=6.00; currencies=[];
+  MIN_R=0; MAX_R=0; PESSOAS=1; FX_RATE=6.00; currencies=[]; MAX_DAYS=0;
   emergency={insurer:'',insurerPhone:'',policy:'',contact:'',contactPhone:'',blood:'',allergies:''};
   embassies=[];
   hospitals=[];
@@ -1065,7 +1095,8 @@ function legSelectOptions(selectedId){
 function catExpenses(catId){ return expenses.filter(function(x){return x.categoryId===catId;}); }
 function catValue(c){ var exps=catExpenses(c.id); return exps.length ? exps.reduce(function(a,x){return a+x.value;},0) : c.value; }
 function total(){ return categories.reduce(function(a,c){return a+catValue(c);},0); }
-function legTotal(){ return legs.reduce(function(a,l){return a+l.value;},0); }
+function legValue(l){ var exps=expenses.filter(function(e){return e.legId===l.id;}); return exps.length ? exps.reduce(function(a,e){return a+e.value;},0) : l.value; }
+function legTotal(){ return legs.reduce(function(a,l){return a+legValue(l);},0); }
 function expTotal(){ return expenses.reduce(function(a,e){return a+e.value;},0); }
 function tripDays(){
   var s=document.getElementById('startdate').value, r=document.getElementById('returndate').value;
@@ -1088,7 +1119,7 @@ function buildPayload(){
     startdate:document.getElementById('startdate').value,
     returndate:document.getElementById('returndate').value,
     pax:Number(document.getElementById('pax').value)||1,
-    goalMin:MIN_R, goalMax:MAX_R, fxRate:FX_RATE, currencies:currencies, emergency:emergency, embassies:embassies, hospitals:hospitals
+    goalMin:MIN_R, goalMax:MAX_R, fxRate:FX_RATE, currencies:currencies, emergency:emergency, embassies:embassies, hospitals:hospitals, maxDays:MAX_DAYS
   };
 }
 function saveSnapshotLocal(payload){ try{ localStorage.setItem(snapshotKey(), JSON.stringify(payload)); }catch(e){} }
@@ -1112,6 +1143,7 @@ function applyPayload(p){
   if(p.emergency) emergency=p.emergency;
   if(p.embassies) embassies=p.embassies;
   if(p.hospitals) hospitals=p.hospitals;
+  if(p.maxDays!=null) MAX_DAYS=p.maxDays;
 }
 function saveNow(){
   if(!sb || !TRIP_ID) return;
@@ -1188,6 +1220,7 @@ function migrateLegs(){
   var needsGeocode=[];
   legs.forEach(function(l,i){
     if(!l.color) l.color=LEG_PALETTE[i%LEG_PALETTE.length];
+    if(l.isBase===undefined) l.isBase=false;
     if(l.lat===undefined || l.lat===null){ l.lat=null; l.lng=null; needsGeocode.push(l); }
   });
   if(!needsGeocode.length) return;
@@ -1239,7 +1272,12 @@ function updateTripRouteText(){
 function syncGoalInputs(){
   document.getElementById('goal-min').value=MIN_R;
   document.getElementById('goal-max').value=MAX_R;
+  document.getElementById('max-days').value=MAX_DAYS;
 }
+document.getElementById('max-days').addEventListener('input', function(){
+  MAX_DAYS=Math.max(0, Number(this.value)||0);
+  renderDaysLimitStatus(); scheduleSave();
+});
 document.getElementById('pax').addEventListener('input', function(){
   PESSOAS=Math.max(1, Number(this.value)||1);
   renderPainel(); updateTripRouteText(); scheduleSave();
@@ -1555,8 +1593,14 @@ document.getElementById('add-leg').addEventListener('click', function(){
   var name=nameInp.value.trim();
   if(!name){ statusEl.textContent='Digite o nome da cidade/trecho.'; statusEl.style.color='var(--danger)'; return; }
   var days=Math.max(1, Number(daysInp.value)||1), value=Math.max(0, Number(valInp.value)||0);
+  var usedDays=legs.reduce(function(a,l){return a+(Number(l.days)||0);},0);
+  if(MAX_DAYS>0 && (usedDays+days)>MAX_DAYS){
+    statusEl.textContent='Isso passaria do limite de '+MAX_DAYS+' dias (já tem '+usedDays+' dias cadastrados). Ajuste o limite em Configuração ou reduza os dias.';
+    statusEl.style.color='var(--danger)';
+    return;
+  }
   var color=LEG_PALETTE[legs.length % LEG_PALETTE.length];
-  var newLeg={id:'leg_'+Date.now(),name:name,days:days,value:value,color:color,lat:null,lng:null};
+  var newLeg={id:'leg_'+Date.now(),name:name,days:days,value:value,color:color,lat:null,lng:null,isBase:false};
   legs.push(newLeg);
   statusEl.textContent='Localizando "'+name+'" no mapa…'; statusEl.style.color='var(--muted)';
   nameInp.value=''; daysInp.value=''; valInp.value='';
@@ -1722,39 +1766,156 @@ document.getElementById('reset-cat').addEventListener('click', function(){
   categories.forEach(function(c){ c.value=c.def; }); renderBudget(); renderPainel(); scheduleSave();
 });
 
+function renderGeneralExpenses(){
+  var box=document.getElementById('general-exp-rows');
+  if(!box) return;
+  var gen=expenses.filter(function(e){return !e.legId;});
+  var catOpts=categories.map(function(c){ return '<option value="'+c.id+'">'+c.icon+' '+esc(c.name)+'</option>'; }).join('');
+  document.getElementById('new-genexp-cat').innerHTML=catOpts;
+  box.innerHTML = gen.length ? gen.map(function(e){
+    var cat=categories.find(function(c){return c.id===e.categoryId;});
+    if(editingCityExpId===e.id){
+      var catOptsSel=categories.map(function(c){ return '<option value="'+c.id+'"'+(c.id===e.categoryId?' selected':'')+'>'+c.icon+' '+esc(c.name)+'</option>'; }).join('');
+      return '<div class="city-exp-row"><input type="text" class="genexp-desc" data-id="'+e.id+'" value="'+esc(e.desc||'')+'" style="flex:1;min-width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:7px 8px;">'+
+        '<select class="genexp-cat" data-id="'+e.id+'">'+catOptsSel+'</select>'+
+        '<input type="number" class="genexp-val" data-id="'+e.id+'" value="'+e.value+'" step="10" min="0">'+
+        '<button type="button" class="iconbtn save genexp-done" data-id="'+e.id+'" title="Fechar">✓</button>'+
+        '<button type="button" class="iconbtn danger genexp-del" data-id="'+e.id+'" title="Excluir">🗑</button></div>';
+    }
+    return '<div class="city-exp-row"><span class="icon">'+(cat?cat.icon:'💰')+'</span>'+
+      '<span class="name" style="flex:1;">'+esc(e.desc||(cat?cat.name:'—'))+'<span class="sub">'+(cat?esc(cat.name):'')+'</span></span>'+
+      '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;">'+brl(e.value)+'</span>'+
+      '<span class="row-actions"><button type="button" class="iconbtn genexp-edit" data-id="'+e.id+'" title="Editar">✎</button><button type="button" class="iconbtn danger genexp-del" data-id="'+e.id+'" title="Excluir">🗑</button></span></div>';
+  }).join('') : '<p class="hint">Nenhuma despesa geral lançada ainda.</p>';
+  document.getElementById('genexp-total').textContent=brl(gen.reduce(function(a,e){return a+e.value;},0));
+  document.querySelectorAll('.genexp-edit').forEach(function(btn){ btn.addEventListener('click', function(){ editingCityExpId=btn.dataset.id; renderGeneralExpenses(); }); });
+  document.querySelectorAll('.genexp-done').forEach(function(btn){ btn.addEventListener('click', function(){ editingCityExpId=null; renderGeneralExpenses(); renderBudget(); scheduleSave(); }); });
+  document.querySelectorAll('.genexp-desc').forEach(function(inp){ inp.addEventListener('input', function(){ var e=expenses.find(function(x){return x.id===inp.dataset.id;}); e.desc=inp.value; scheduleSave(); }); });
+  document.querySelectorAll('.genexp-cat').forEach(function(sel){ sel.addEventListener('change', function(){ var e=expenses.find(function(x){return x.id===sel.dataset.id;}); e.categoryId=sel.value; scheduleSave(); }); });
+  document.querySelectorAll('.genexp-val').forEach(function(inp){ inp.addEventListener('input', function(){ var e=expenses.find(function(x){return x.id===inp.dataset.id;}); e.value=Math.max(0, Number(inp.value)||0); renderGeneralExpenses(); renderBudget(); scheduleSave(); }); });
+  document.querySelectorAll('.genexp-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(!confirm('Excluir esta despesa?')) return;
+      expenses=expenses.filter(function(x){return x.id!==btn.dataset.id;});
+      editingCityExpId=null;
+      renderGeneralExpenses(); renderBudget(); scheduleSave();
+    });
+  });
+}
+document.getElementById('add-genexp').addEventListener('click', function(){
+  var descInp=document.getElementById('new-genexp-desc'), catSel=document.getElementById('new-genexp-cat'), valInp=document.getElementById('new-genexp-value');
+  var desc=descInp.value.trim(); var value=Math.max(0, Number(valInp.value)||0);
+  if(!catSel.value || (!desc && !value)) return;
+  expenses.push({id:'exp_'+Date.now(),categoryId:catSel.value,legId:'',person:'',mode:'',desc:desc||categories.find(function(c){return c.id===catSel.value;}).name,value:value});
+  descInp.value=''; valInp.value='';
+  renderGeneralExpenses(); renderBudget(); scheduleSave();
+});
 var editingLegName=null;
+var editingCityExpId=null;
 function legPerDayText(l){
   var spend=expenses.filter(function(e){return e.legId===l.id;}).reduce(function(a,e){return a+e.value;},0);
   var base=spend||l.value;
   return brl(base/(l.days||1))+'/dia';
 }
+function renderDaysLimitStatus(){
+  var box=document.getElementById('days-limit-status');
+  if(!box) return;
+  var used=legs.reduce(function(a,l){return a+(Number(l.days)||0);},0);
+  if(!MAX_DAYS){ box.innerHTML='<p class="hint">Dias cadastrados nas cidades: <b style="color:var(--cream);">'+used+'</b> (defina um limite em Configuração se quiser controlar isso)</p>'; return; }
+  var over=used>MAX_DAYS;
+  box.innerHTML='<div class="row" style="'+(over?'border-color:var(--danger);':'')+'">'+
+    '<span class="name">Dias usados nas cidades</span>'+
+    '<span style="font-weight:800;font-family:Inter,sans-serif;color:'+(over?'var(--danger)':'var(--numgreen)')+';">'+used+' de '+MAX_DAYS+'</span>'+
+    '</div>'+(over?'<p class="hint" style="color:var(--danger);margin-top:4px;">⚠ Isso passa do limite definido em Configuração.</p>':'');
+}
 function renderLegRows(){
+  renderGeneralExpenses();
   document.getElementById('leg-rows').innerHTML = legs.map(function(l){
     var nameHtml = editingLegName===l.id
       ? '<input type="text" class="leg-name-edit" data-id="'+l.id+'" value="'+esc(l.name)+'" style="flex:1;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:14px;padding:6px 8px;">'
-      : '<span class="name">'+esc(l.name)+'<span class="sub">'+l.days+' dias · '+legPerDayText(l)+(l.lat==null?' · sem localização no mapa':'')+'</span></span>';
-    return '<div class="row leg-row" draggable="true" data-id="'+l.id+'">'+
-      '<span class="iconbtn drag-handle" title="Arrastar para reordenar" style="cursor:grab;">⠿</span>'+
-      '<span class="icon" style="color:'+l.color+'">📍</span>'+
-      nameHtml+
-      '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" class="leg-value" data-id="'+l.id+'" value="'+l.value+'"></span>'+
-      '<span class="row-actions">'+
-      '<button type="button" class="iconbtn leg-rename" data-id="'+l.id+'" title="'+(editingLegName===l.id?'Salvar nome':'Editar nome')+'">'+(editingLegName===l.id?'✓':'✎')+'</button>'+
-      '<button type="button" class="iconbtn danger leg-del" data-id="'+l.id+'" title="Excluir trecho">🗑</button>'+
-      '</span></div>';
+      : '<span class="vtimeline-name" style="flex:1;">'+esc(l.name)+(l.isBase?' <span class="base-badge">🏠 Base</span>':'')+'</span>';
+    var cityExps=expenses.filter(function(e){return e.legId===l.id;});
+    var cityTotal=cityExps.reduce(function(a,e){return a+e.value;},0);
+    var valueHtml = cityExps.length
+      ? '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;font-weight:700;color:var(--numgreen);">'+brl(cityTotal)+'</span>'
+      : '<span class="row-inputwrap"><span class="prefix">R$</span><input type="number" step="50" min="0" class="leg-value" data-id="'+l.id+'" value="'+l.value+'"></span>';
+    var catOpts=categories.map(function(c){ return '<option value="'+c.id+'">'+c.icon+' '+esc(c.name)+'</option>'; }).join('');
+    var expHtml=cityExps.map(function(e){
+      var cat=categories.find(function(c){return c.id===e.categoryId;});
+      if(editingCityExpId===e.id){
+        var catOptsSel=categories.map(function(c){ return '<option value="'+c.id+'"'+(c.id===e.categoryId?' selected':'')+'>'+c.icon+' '+esc(c.name)+'</option>'; }).join('');
+        return '<div class="city-exp-row"><input type="text" class="cexp-desc" data-id="'+e.id+'" value="'+esc(e.desc||'')+'" placeholder="Descrição" style="flex:1;min-width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:7px 8px;">'+
+          '<select class="cexp-cat" data-id="'+e.id+'">'+catOptsSel+'</select>'+
+          '<input type="number" class="cexp-val" data-id="'+e.id+'" value="'+e.value+'" step="10" min="0">'+
+          '<button type="button" class="iconbtn save cexp-done" data-id="'+e.id+'" title="Fechar">✓</button>'+
+          '<button type="button" class="iconbtn danger cexp-del" data-id="'+e.id+'" title="Excluir">🗑</button></div>';
+      }
+      return '<div class="city-exp-row"><span class="icon">'+(cat?cat.icon:'💰')+'</span>'+
+        '<span class="name" style="flex:1;">'+esc(e.desc||(cat?cat.name:'—'))+'<span class="sub">'+(cat?esc(cat.name):'')+'</span></span>'+
+        '<span style="font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--numgreen);font-weight:700;">'+brl(e.value)+'</span>'+
+        '<span class="row-actions"><button type="button" class="iconbtn cexp-edit" data-id="'+e.id+'" title="Editar">✎</button><button type="button" class="iconbtn danger cexp-del" data-id="'+e.id+'" title="Excluir">🗑</button></span></div>';
+    }).join('');
+    return '<div class="city-card leg-row'+(l.isBase?' is-base':'')+'" draggable="true" data-id="'+l.id+'">'+
+      '<div class="city-head">'+
+        '<span class="iconbtn drag-handle" style="cursor:grab;" title="Arrastar para reordenar">⠿</span>'+
+        '<span class="icon" style="color:'+l.color+'">📍</span>'+
+        '<span class="city-name-wrap">'+nameHtml+'</span>'+
+        '<input type="number" class="leg-days" data-id="'+l.id+'" value="'+l.days+'" min="0" step="1" title="Dias/noites nesta cidade" style="width:56px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:13px;padding:6px 6px;text-align:center;">'+
+        '<span class="hint" style="white-space:nowrap;">dias</span>'+
+        valueHtml+
+        '<span class="row-actions">'+
+          '<button type="button" class="iconbtn leg-base" data-id="'+l.id+'" title="'+(l.isBase?'Remover marcação de base':'Marcar como cidade base')+'" style="'+(l.isBase?'color:var(--amber);border-color:var(--amber);':'')+'">🏠</button>'+
+          '<button type="button" class="iconbtn leg-rename" data-id="'+l.id+'" title="'+(editingLegName===l.id?'Salvar nome':'Editar nome')+'">'+(editingLegName===l.id?'✓':'✎')+'</button>'+
+          '<button type="button" class="iconbtn danger leg-del" data-id="'+l.id+'" title="Excluir cidade">🗑</button>'+
+        '</span>'+
+      '</div>'+
+      '<div class="city-expenses">'+
+        expHtml+
+        '<div class="city-exp-row">'+
+          '<input type="text" class="new-cexp-desc" data-leg="'+l.id+'" placeholder="Descrição (ex: Disneyland Paris)" style="flex:1;min-width:100px;background:var(--bg-card-alt);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;padding:7px 8px;">'+
+          '<select class="new-cexp-cat" data-leg="'+l.id+'">'+catOpts+'</select>'+
+          '<input type="number" class="new-cexp-val" data-leg="'+l.id+'" placeholder="Valor R$" step="10" min="0">'+
+          '<button type="button" class="iconbtn save cexp-add" data-leg="'+l.id+'" title="Adicionar despesa">+</button>'+
+        '</div>'+
+        (cityExps.length?'<p class="city-exp-total">Total desta cidade: '+brl(cityTotal)+' · '+l.days+' dia'+(l.days!=1?'s':'')+'</p>':'')+
+      '</div>'+
+    '</div>';
   }).join('');
   document.getElementById('leg-total').textContent=brl(legTotal());
+  renderDaysLimitStatus();
 
   document.querySelectorAll('.leg-value').forEach(function(inp){
     inp.addEventListener('input', function(){ var l=legById(inp.dataset.id); l.value=Math.max(0, Number(inp.value)||0); document.getElementById('leg-total').textContent=brl(legTotal()); renderLegBar(); scheduleSave(); });
   });
+  document.querySelectorAll('.leg-days').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var l=legById(inp.dataset.id);
+      var newDays=Math.max(0, Number(inp.value)||0);
+      var otherTotal=legs.filter(function(x){return x.id!==l.id;}).reduce(function(a,x){return a+(Number(x.days)||0);},0);
+      if(MAX_DAYS>0 && (otherTotal+newDays)>MAX_DAYS){
+        alert('Isso passaria do limite de '+MAX_DAYS+' dias definido em Configuração (as outras cidades já somam '+otherTotal+' dias). Ajuste o limite ou reduza os dias de alguma cidade.');
+        inp.value=l.days;
+        return;
+      }
+      l.days=newDays;
+      renderDaysLimitStatus(); renderLegBar(); renderPerDayChart(); scheduleSave();
+    });
+  });
+  document.querySelectorAll('.leg-base').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var l=legById(btn.dataset.id);
+      l.isBase=!l.isBase;
+      renderLegRows(); scheduleSave();
+    });
+  });
   document.querySelectorAll('.leg-del').forEach(function(btn){
     btn.addEventListener('click', function(){
-      if(!confirm('Excluir este trecho? Os dias do roteiro ligados a ele também serão removidos.')) return;
+      if(!confirm('Excluir esta cidade? Os dias do roteiro e as despesas ligadas a ela também serão removidos.')) return;
       legs=legs.filter(function(x){return x.id!==btn.dataset.id;});
       itinerary=itinerary.filter(function(x){return x.leg!==btn.dataset.id;});
       pois=pois.filter(function(x){return x.legId!==btn.dataset.id;});
-      renderLegRows(); renderLegBar(); renderItinerary(); renderPainel(); updateTripRouteText(); initMap(); scheduleSave();
+      expenses=expenses.filter(function(x){return x.legId!==btn.dataset.id;});
+      renderLegRows(); renderLegBar(); renderItinerary(); renderPainel(); renderBudget(); updateTripRouteText(); initMap(); scheduleSave();
     });
   });
   document.querySelectorAll('.leg-rename').forEach(function(btn){
@@ -1776,11 +1937,38 @@ function renderLegRows(){
   document.querySelectorAll('.leg-name-edit').forEach(function(inp){
     inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ document.querySelector('.leg-rename[data-id="'+inp.dataset.id+'"]').click(); } });
   });
+  document.querySelectorAll('.cexp-edit').forEach(function(btn){ btn.addEventListener('click', function(){ editingCityExpId=btn.dataset.id; renderLegRows(); }); });
+  document.querySelectorAll('.cexp-done').forEach(function(btn){ btn.addEventListener('click', function(){ editingCityExpId=null; renderLegRows(); renderBudget(); scheduleSave(); }); });
+  document.querySelectorAll('.cexp-desc').forEach(function(inp){ inp.addEventListener('input', function(){ var e=expenses.find(function(x){return x.id===inp.dataset.id;}); e.desc=inp.value; scheduleSave(); }); });
+  document.querySelectorAll('.cexp-cat').forEach(function(sel){ sel.addEventListener('change', function(){ var e=expenses.find(function(x){return x.id===sel.dataset.id;}); e.categoryId=sel.value; scheduleSave(); }); });
+  document.querySelectorAll('.cexp-val').forEach(function(inp){ inp.addEventListener('input', function(){ var e=expenses.find(function(x){return x.id===inp.dataset.id;}); e.value=Math.max(0, Number(inp.value)||0); scheduleSave(); }); });
+  document.querySelectorAll('.cexp-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(!confirm('Excluir esta despesa?')) return;
+      expenses=expenses.filter(function(x){return x.id!==btn.dataset.id;});
+      editingCityExpId=null;
+      renderLegRows(); renderBudget(); scheduleSave();
+    });
+  });
+  document.querySelectorAll('.cexp-add').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var legId=btn.dataset.leg;
+      var descInp=document.querySelector('.new-cexp-desc[data-leg="'+legId+'"]');
+      var catSel=document.querySelector('.new-cexp-cat[data-leg="'+legId+'"]');
+      var valInp=document.querySelector('.new-cexp-val[data-leg="'+legId+'"]');
+      var value=Math.max(0, Number(valInp.value)||0);
+      var desc=descInp.value.trim();
+      if(!catSel.value || (!value && !desc)) return;
+      expenses.push({id:'exp_'+Date.now(),categoryId:catSel.value,legId:legId,person:'',mode:'',desc:desc||categories.find(function(c){return c.id===catSel.value;}).name,value:value});
+      descInp.value=''; valInp.value='';
+      renderLegRows(); renderBudget(); scheduleSave();
+    });
+  });
 
   // arrastar e soltar para reordenar
   var dragId=null;
   document.querySelectorAll('.leg-row').forEach(function(row){
-    row.addEventListener('dragstart', function(){ dragId=row.dataset.id; row.style.opacity='0.4'; });
+    row.addEventListener('dragstart', function(e){ dragId=row.dataset.id; row.style.opacity='0.4'; });
     row.addEventListener('dragend', function(){ row.style.opacity='1'; });
     row.addEventListener('dragover', function(e){ e.preventDefault(); });
     row.addEventListener('drop', function(e){
@@ -1798,7 +1986,7 @@ function renderLegRows(){
 }
 function renderLegBar(){
   var ctx=document.getElementById('legbar');
-  var data={ labels:legs.map(function(l){return l.name;}), datasets:[{ data:legs.map(function(l){return l.value;}), backgroundColor:legs.map(function(l){return l.color;}), borderRadius:5, barThickness:26 }] };
+  var data={ labels:legs.map(function(l){return l.name;}), datasets:[{ data:legs.map(function(l){return legValue(l);}), backgroundColor:legs.map(function(l){return l.color;}), borderRadius:5, barThickness:26 }] };
   if(legChart){ legChart.data=data; legChart.update(); return; }
   legChart=new Chart(ctx,{ type:'bar', data:data, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
     scales:{ x:{ ticks:{ callback:function(v){return brl(v);}, color:'#8B8FA3' }, grid:{ color:'#E3E5F5' } }, y:{ ticks:{ color:'#2B2D42' }, grid:{ display:false } } },
@@ -1983,6 +2171,7 @@ function seatCellHtml(r,c,seat){
   var me = seat && seat.row===r && seat.col===c;
   return '<span class="seat-cell'+(me?' me':'')+'">'+(me?'★':c)+'</span>';
 }
+function findTransportCategoryId(){ var c=categories.find(function(x){return isTransportCat(x);}); return c?c.id:(categories[0]?categories[0].id:null); }
 function renderFlights(){
   document.getElementById('flights-list').innerHTML = flights.map(function(f){
     var dateTxt = f.date ? f.date.split('-').reverse().join('/') : '';
@@ -1994,6 +2183,7 @@ function renderFlights(){
         '<div>Voo<b>'+esc(f.number||'—')+'</b></div>'+
         '<div>Data<b>'+dateTxt+'</b></div>'+
         '<div>Assento<b>'+esc(f.seat||'—')+'</b></div>'+
+        '<div>Valor<b>'+(f.value?brl(f.value):'—')+'</b></div>'+
       '</div>'+
       '<div class="seat-wrap" id="seatwrap-'+f.id+'" style="display:none;">'+seatMapHtml(f.aircraft,f.seat)+'</div>'+
       '</div>';
@@ -2002,7 +2192,12 @@ function renderFlights(){
     btn.addEventListener('click', function(){ var w=document.getElementById('seatwrap-'+btn.dataset.id); w.style.display = w.style.display==='none'?'block':'none'; });
   });
   document.querySelectorAll('.fl-del').forEach(function(btn){
-    btn.addEventListener('click', function(){ if(!confirm('Excluir este voo?')) return; flights=flights.filter(function(x){return x.id!==btn.dataset.id;}); renderFlights(); scheduleSave(); });
+    btn.addEventListener('click', function(){
+      if(!confirm('Excluir este voo?')) return;
+      flights=flights.filter(function(x){return x.id!==btn.dataset.id;});
+      expenses=expenses.filter(function(x){return x.id!=='flightexp_'+btn.dataset.id;});
+      renderFlights(); renderBudget(); scheduleSave();
+    });
   });
 }
 document.getElementById('toggle-flight-form').addEventListener('click', function(){
@@ -2019,11 +2214,17 @@ document.getElementById('add-flight').addEventListener('click', function(){
   var to=document.getElementById('fl-to').value.trim().toUpperCase();
   var seat=document.getElementById('fl-seat').value.trim().toUpperCase();
   var aircraft=document.getElementById('fl-aircraft').value;
+  var value=Math.max(0, Number(document.getElementById('fl-value').value)||0);
   if(!airline && !from && !to){ alert('Preencha ao menos companhia, origem e destino.'); return; }
-  flights.push({id:'fl_'+Date.now(),airline:airline,number:number,date:date,from:from,to:to,seat:seat,aircraft:aircraft});
-  ['fl-airline','fl-number','fl-from','fl-to','fl-seat'].forEach(function(id){ document.getElementById(id).value=''; });
+  var f={id:'fl_'+Date.now(),airline:airline,number:number,date:date,from:from,to:to,seat:seat,aircraft:aircraft,value:value};
+  flights.push(f);
+  if(value>0){
+    var catId=findTransportCategoryId();
+    if(catId) expenses.push({id:'flightexp_'+f.id,categoryId:catId,legId:'',person:'',mode:'aviao',desc:(from||'?')+' → '+(to||'?'),value:value});
+  }
+  ['fl-airline','fl-number','fl-from','fl-to','fl-seat','fl-value'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('fl-date').value='';
-  renderFlights(); scheduleSave();
+  renderFlights(); renderBudget(); scheduleSave();
 });
 
 // ---------- DOCUMENTOS: ARQUIVOS PDF ----------
